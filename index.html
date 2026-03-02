@@ -62,20 +62,33 @@
       color: var(--muted);
       margin-bottom: 1rem;
     }
-    .hero .cta {
-      display: inline-block;
+    .hero .cta-pill {
+      display: inline-flex;
       margin-top: 0.5rem;
-      padding: 0.55rem 1.4rem;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--accent);
+    }
+    .hero .cta-pill a {
+      padding: 0.55rem 1.2rem;
+      font-weight: 600;
+      font-size: 0.92rem;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .hero .cta-pill a:first-child {
       background: var(--accent);
       color: #fff;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 1rem;
-      text-decoration: none;
-      transition: opacity 0.15s;
     }
-    .hero .cta:hover {
-      opacity: 0.85;
+    .hero .cta-pill a:not(:first-child) {
+      background: transparent;
+      color: var(--accent);
+      border-left: 1px solid var(--accent);
+    }
+    .hero .cta-pill a:hover {
+      background: var(--accent);
+      color: #fff;
       text-decoration: none;
     }
 
@@ -213,24 +226,35 @@
     <p class="tagline">
       Structured, portable comments for Markdown — anchoring, authorship, threading, and metadata using only standard footnotes, blockquotes, and @-mentions.
     </p>
-    <a class="cta" href="https://github.com/petrroll/mdcomments/blob/main/rationale.md">Read the Design Rationale &rarr;</a>
+    <div class="cta-pill">
+      <a href="https://github.com/petrroll/mdcomments/blob/main/rationale.md">Design Rationale</a>
+      <a href="examples/results.html">Examples</a>
+      <a href="examples/interactive-editor/index.html">Interactive Editor</a>
+    </div>
   </header>
 
-  <!-- Why -->
+  <!-- How it works -->
   <section>
-    <h2>Why mdcomments?</h2>
+    <h2>How It Works</h2>
     <p>
-      Markdown is the universal format for LLM-generated and LLM-consumed content, yet there is no portable way to annotate it with structured comments.
+      Inline <code>[^c-id]</code> markers anchor comments to text. Threads are defined at the bottom using footnote syntax with <code>@author (date):</code> and blockquoted messages:
     </p>
+    <pre><code>The ==monthly revenue grew by 15%==[^c-rev1] last quarter.
+
+[^c-rev1]:
+    @alice (2026-02-10):
+    &gt; Is this YoY?
+
+    @bob (2026-02-11):
+    &gt; Yes. Added a clarifying note.</code></pre>
     <p>
-      Existing solutions are either unstructured (HTML&nbsp;comments, <code>%%</code>, CriticMarkup) or platform-locked (HackMD, Notion).
-    </p>
-    <p>
-      Comments should live <em>in</em> the file and survive round-tripping through any tool.
+      Wrap text in <code>==...==</code> for range anchoring; an <code>anchor:</code> metadata line provides a fallback for parsers without highlight syntax.
+      For large documents, threads can live in a companion <code>document.comments.md</code> file.
+      In any standard renderer, comments degrade gracefully to ordinary footnotes.
     </p>
   </section>
 
-  <!-- Features -->
+  <!-- Design Goals -->
   <section>
     <h2>Design Goals</h2>
     <div class="features">
@@ -259,27 +283,6 @@
         <p>Comments aren't stripped on export or import.</p>
       </div>
     </div>
-  </section>
-
-  <!-- How it works -->
-  <section>
-    <h2>How It Works</h2>
-    <p>
-      Inline <code>[^c-id]</code> markers anchor comments to text. Threads are defined at the bottom using footnote syntax with <code>@author (date):</code> and blockquoted messages:
-    </p>
-    <pre><code>The ==monthly revenue grew by 15%==[^c-rev1] last quarter.
-
-[^c-rev1]:
-    @alice (2026-02-10):
-    &gt; Is this YoY?
-
-    @bob (2026-02-11):
-    &gt; Yes. Added a clarifying note.</code></pre>
-    <p>
-      Wrap text in <code>==...==</code> for range anchoring; an <code>anchor:</code> metadata line provides a fallback for parsers without highlight syntax.
-      For large documents, threads can live in a companion <code>document.comments.md</code> file.
-      In any standard renderer, comments degrade gracefully to ordinary footnotes.
-    </p>
   </section>
 
   <!-- Why footnotes -->
@@ -425,25 +428,6 @@
         </tbody>
       </table>
     </div>
-  </section>
-
-  <!-- Links -->
-  <section>
-    <h2>Learn More</h2>
-    <ul class="learn-more-cards">
-      <li>
-        <a href="https://github.com/petrroll/mdcomments/blob/main/rationale.md">Design Rationale</a>
-        <span class="desc">Why footnotes? A deep dive into the design decisions and trade-offs.</span>
-      </li>
-      <li>
-        <a href="examples/results.html">Cross-Parser Examples</a>
-        <span class="desc">See how mdcomments renders across five different Markdown systems.</span>
-      </li>
-      <li>
-        <a href="examples/interactive-editor/index.html">Interactive Editor</a>
-        <span class="desc">Try threaded comments in a live editor — no setup required.</span>
-      </li>
-    </ul>
   </section>
 
   <footer>
