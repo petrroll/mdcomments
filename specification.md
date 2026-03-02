@@ -5,12 +5,14 @@ This document defines the mdcomments format as a strict profile over [extended M
 - inline anchors
 - comment threads in footnote definitions
 - optional sidecar thread storage
+- optional markerless sidecar anchoring (no comment markers in host)
 
 ## 1. Terminology
 
 - **Host document**: the primary Markdown file (for example `document.md`).
 - **Comment marker**: an inline footnote reference with a comment identifier, for example `[^c-1]`.
-- **Thread definition**: a footnote definition whose identifier matches a marker.
+- **Thread definition**: a footnote definition for a comment identifier (`c-*`), referenced either by a host marker or by sidecar anchor metadata.
+- **Sidecar anchor metadata**: metadata inside a thread definition that identifies anchor text in the host document.
 - **Entry header**: a line in the form `@author (date):`.
 - **Entry body**: one or more blockquoted lines belonging to an entry.
 - **Sidecar file**: a companion Markdown file storing thread definitions, typically `document.comments.md`.
@@ -26,9 +28,10 @@ A document conforms to mdcomments normal format if all of the following hold:
 
 A sidecar configuration conforms if:
 
-1. The host document contains markers but no required in-document thread definitions for those markers.
-2. The sidecar file provides the missing thread definitions.
+1. The sidecar file provides thread definitions.
+2. The host document MAY contain markers; in markerless mode it contains none.
 3. Identifier uniqueness is preserved across host + sidecar combined scope.
+4. If a thread id is not referenced by a host marker, the sidecar thread MUST include `anchor:` metadata.
 
 ## 3. Normal Format (single-file)
 
@@ -81,30 +84,43 @@ Recommended naming:
 
 Given host `document.md`, a consumer:
 
-1. Parses markers in the host.
+1. Parses markers in the host (if any).
 2. Parses thread definitions in host.
-3. If definitions are missing, loads `document.comments.md` if present.
+3. Loads `document.comments.md` if present.
 4. Merges definition maps by identifier.
 5. Raises an error on duplicate identifier definitions.
+6. For sidecar-only threads (no host marker), resolves anchors by sidecar metadata.
 
 ### 4.3 Sidecar example
 
-Host (`document.md`):
+Host (`document.md`, markerless):
 
 ```markdown
-Revenue grew by 15%[^c-rev1].
+Revenue grew by 15%.
 ```
 
 Sidecar (`document.comments.md`):
 
 ```markdown
 [^c-rev1]:
+    anchor: "Revenue grew by 15%"
+    anchor_occurrence: 1
+
     @alice (2026-02-10):
     > Is this YoY?
 
     @bob (2026-02-11):
     > Yes. Added a clarifying note.
 ```
+
+### 4.4 Sidecar anchor metadata
+
+In markerless sidecar mode, thread positioning is declared in sidecar metadata:
+
+- `anchor: <text>` — anchor text to match in host content.
+- `anchor_occurrence: <n>` — optional 1-based occurrence index of anchor text in host.
+
+If `anchor_occurrence` is omitted, consumers SHOULD use the first match.
 
 ## 5. Formal Grammar (EBNF)
 
@@ -148,7 +164,7 @@ ALPHA            = "A".."Z" | "a".."z" ;
 DIGIT            = "0".."9" ;
 ```
 
-## 6. Marker Grammar (inline)
+## 6. Marker Grammar (inline, when used)
 
 ```ebnf
 CommentMarker    = "[^", CommentId, "]" ;
@@ -167,6 +183,10 @@ A validator SHOULD enforce:
 3. Each thread has at least one entry header + body pair.
 4. Entry headers use ISO date `YYYY-MM-DD`.
 5. Entry order is preserved as source order.
+
+In markerless sidecar mode, validators SHOULD additionally enforce:
+
+6. Every sidecar-only thread includes usable anchor metadata (`anchor:` at minimum).
 
 A validator MAY warn for:
 

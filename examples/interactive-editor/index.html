@@ -351,6 +351,30 @@ body {
   background: var(--badge-resolved-bg);
 }
 
+.thread-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+}
+
+.thread-remove-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 5px;
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 0.18rem 0.35rem;
+  cursor: pointer;
+}
+
+.thread-remove-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .comment-entry {
   padding: 0.35rem 0;
   border-top: 1px solid var(--comment-border);
@@ -654,8 +678,6 @@ launch of the Teams feature[^c-teams1] in late February.
 ---
 
 [^c-rev1]:
-    anchor: "monthly revenue grew by 15%"
-
     @alice (2026-02-10):
     > Are we comparing this to the same quarter last year, or
     > quarter-over-quarter?
@@ -685,7 +707,6 @@ launch of the Teams feature[^c-teams1] in late February.
     > December? It was still pending in the CRM last I checked.
 
 [^c-acv1]:
-    anchor: "average contract value increased to $18,500"
     status: resolved
 
     @alice (2026-02-14):
@@ -704,8 +725,6 @@ launch of the Teams feature[^c-teams1] in late February.
     > under "engagement."
 
 [^c-onb1]:
-    anchor: "onboarding completion rate hit 78%"
-
     @carol (2026-02-15):
     > This is a huge jump. What drove it — the new tutorial
     > flow or the checklist widget?
@@ -769,11 +788,13 @@ function parseCommentThreads(md) {
   const blocks = extractFootnoteBlocks(md);
 
   for (const block of blocks) {
-    const thread = { id: block.id, anchor: null, status: 'open', entries: [] };
+    const thread = { id: block.id, anchor: null, anchorOccurrence: 1, status: 'open', entries: [] };
 
     // Parse metadata lines (anchor:, status:)
     const anchorMatch = block.body.match(/^\s*anchor:\s*"([^"]+)"/m);
     if (anchorMatch) thread.anchor = anchorMatch[1];
+    const anchorOccurrenceMatch = block.body.match(/^\s*anchor_occurrence:\s*(\d+)/m);
+    if (anchorOccurrenceMatch) thread.anchorOccurrence = Math.max(1, parseInt(anchorOccurrenceMatch[1], 10) || 1);
     const statusMatch = block.body.match(/^\s*status:\s*(\S+)/m);
     if (statusMatch) thread.status = statusMatch[1];
 
@@ -820,7 +841,7 @@ function stripFootnoteBlocks(md) {
  * Render Markdown to HTML, replacing ==text==[^c-xxx] with highlight+badge,
  * and [^c-xxx] (point comments) with just a badge.
  */
-function renderPreview(md) {
+function renderPreview(md, threads = new Map()) {
   // Strip footnote definitions from content for rendering
   let content = stripFootnoteBlocks(md);
 
@@ -829,14 +850,14 @@ function renderPreview(md) {
     /==([\s\S]*?)==\[\^(c-[^\]]+)\]/g,
     (_, text, id) =>
       `<span class="cm-highlight" data-thread="${id}">${text}</span>` +
-      `<a class="cm-badge" data-thread="${id}" href="#thread-${id}" title="View comment thread">💬</a>`
+      `<a class="cm-badge" data-thread="${id}" data-status="${threads.get(id)?.status || 'open'}" href="#thread-${id}" title="View comment thread">💬</a>`
   );
 
   // Replace remaining [^c-xxx] (point comments, no highlight)
   content = content.replace(
     /\[\^(c-[^\]]+)\]/g,
     (_, id) =>
-      `<a class="cm-badge" data-thread="${id}" href="#thread-${id}" title="View comment thread">💬</a>`
+      `<a class="cm-badge" data-thread="${id}" data-status="${threads.get(id)?.status || 'open'}" href="#thread-${id}" title="View comment thread">💬</a>`
   );
 
   // Use marked.js for standard Markdown
@@ -878,11 +899,14 @@ function renderSidebar(threads) {
     const isActive = id === activeThread;
     html += `<div class="thread-card ${isActive ? 'active' : ''}" data-thread="${id}" id="thread-${id}" onclick="focusThread('${id}')">`;
 
-    if (thread.anchor) {
+    if (sidecarMode && thread.anchor) {
       html += `<div class="thread-anchor">${escHtml(thread.anchor)}</div>`;
     }
 
-    html += `<span class="thread-status thread-status-${thread.status}">${thread.status}</span>`;
+    html += `<div class="thread-header-row">` +
+      `<span class="thread-status thread-status-${thread.status}">${thread.status}</span>` +
+      `<button class="thread-remove-btn" title="Remove thread" onclick="removeThread('${id}');event.stopPropagation();">✕</button>` +
+      `</div>`;
 
     for (const entry of thread.entries) {
       html += `<div class="comment-entry">
@@ -916,10 +940,157 @@ function escHtml(s) {
 
 let sidecarMode = false;
 
+function stripInlineCommentMarkers(md) {
+  return md
+    .replace(/==([\s\S]*?)==\[\^(c-[^\]]+)\]/g, '$1')
+    .replace(/\[\^(c-[^\]]+)\]/g, '');
+}
+
+function extractRangeAnchors(md) {
+  const anchors = new Map();
+  const re = /==([\s\S]*?)==\[\^(c-[^\]]+)\]/g;
+  let match;
+  while ((match = re.exec(md))) {
+    const text = match[1].replace(/\s+/g, ' ').trim();
+    if (text) anchors.set(match[2], text);
+  }
+  return anchors;
+}
+
+function deriveAnchorFromRange(doc, start, end, preferredText = '') {
+  const lineStart = doc.lastIndexOf('\n', start) + 1;
+  const lineEndIndex = doc.indexOf('\n', end);
+  const lineEnd = lineEndIndex === -1 ? doc.length : lineEndIndex;
+  const line = doc.slice(lineStart, lineEnd);
+
+  const relStart = Math.max(0, start - lineStart);
+  const relEnd = Math.max(relStart, Math.min(line.length, end - lineStart));
+
+  let sentenceStart = 0;
+  for (let i = relStart - 1; i >= 0; i--) {
+    if (/[.!?]/.test(line[i])) {
+      sentenceStart = i + 1;
+      break;
+    }
+  }
+
+  let sentenceEnd = line.length;
+  for (let i = relEnd; i < line.length; i++) {
+    if (/[.!?]/.test(line[i])) {
+      sentenceEnd = i + 1;
+      break;
+    }
+  }
+
+  let anchor = line.slice(sentenceStart, sentenceEnd)
+    .replace(/\[\^(c-[^\]]+)\]/g, '')
+    .replace(/==/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!anchor || anchor.length < 18) {
+    const pad = 55;
+    const wStart = Math.max(0, relStart - pad);
+    const wEnd = Math.min(line.length, relEnd + pad);
+    anchor = line.slice(wStart, wEnd)
+      .replace(/\[\^(c-[^\]]+)\]/g, '')
+      .replace(/==/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  if (!anchor) {
+    anchor = (preferredText || '').replace(/\s+/g, ' ').trim();
+  }
+
+  return anchor.slice(0, 140);
+}
+
+function deriveAnchorFromSelection(doc, selectedText) {
+  const normalized = selectedText.replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+  const pattern = new RegExp(escapeRegex(normalized).replace(/\s+/g, '\\s+'), 'm');
+  const match = pattern.exec(doc);
+  if (!match) return normalized.slice(0, 140);
+  return deriveAnchorFromRange(doc, match.index, match.index + match[0].length, normalized);
+}
+
+function extractAnchorsFromMarkers(md) {
+  const anchors = new Map();
+
+  const rangeRe = /==([\s\S]*?)==\[\^(c-[^\]]+)\]/g;
+  let match;
+  while ((match = rangeRe.exec(md))) {
+    anchors.set(match[2], deriveAnchorFromRange(md, match.index, match.index + match[0].length, match[1]));
+  }
+
+  const pointRe = /\[\^(c-[^\]]+)\]/g;
+  while ((match = pointRe.exec(md))) {
+    const id = match[1];
+    if (anchors.has(id)) continue;
+    anchors.set(id, deriveAnchorFromRange(md, match.index, match.index + match[0].length));
+  }
+
+  return anchors;
+}
+
+function stripSidecarAnchorMetadata(md) {
+  return md
+    .split('\n')
+    .filter(line => !/^(?: {4}|\t)(?:anchor|anchor_occurrence):\s*/.test(line))
+    .join('\n');
+}
+
+function replaceNthOccurrence(source, target, n, replacement) {
+  if (!target || n < 1) return source;
+  const pattern = new RegExp(escapeRegex(target).replace(/\s+/g, '\\s+'), 'g');
+  let count = 0;
+  let match;
+  while ((match = pattern.exec(source))) {
+    count += 1;
+    if (count === n) {
+      return source.slice(0, match.index) + replacement + source.slice(match.index + match[0].length);
+    }
+  }
+  return source;
+}
+
+function injectThreadMarkersFromSidecar(doc, threads) {
+  let result = doc;
+  const ordered = [...threads.values()]
+    .filter(t => t.anchor)
+    .sort((a, b) => b.anchor.length - a.anchor.length);
+  for (const thread of ordered) {
+    const occurrence = Number.isInteger(thread.anchorOccurrence) ? Math.max(1, thread.anchorOccurrence) : 1;
+    const safeAnchor = thread.anchor.replace(/\s+/g, ' ').trim();
+    if (!safeAnchor) continue;
+    result = replaceNthOccurrence(result, safeAnchor, occurrence, `==${safeAnchor}==[^${thread.id}]`);
+  }
+  return result;
+}
+
+function removeThreadFromMarkdown(md, threadId, removeMarkers = false) {
+  const blocks = extractFootnoteBlocks(md);
+  const block = blocks.find(b => b.id === threadId);
+  if (!block) return md;
+  const lines = md.split('\n');
+  lines.splice(block.startLine, block.endLine - block.startLine);
+  let next = lines.join('\n');
+  if (removeMarkers) {
+    const escapedId = escapeRegex(threadId);
+    next = next
+      .replace(new RegExp(`==([\\s\\S]*?)==\\[\\^${escapedId}\\]`, 'g'), '$1')
+      .replace(new RegExp(`\\[\\^${escapedId}\\]`, 'g'), '');
+  }
+  return next;
+}
+
 function splitContent(md) {
   const lines = md.split('\n');
   const blocks = extractFootnoteBlocks(md);
-  if (blocks.length === 0) return { doc: md.trimEnd() + '\n', comments: '' };
+  if (blocks.length === 0) return { doc: stripInlineCommentMarkers(md).trimEnd() + '\n', comments: '' };
+
+  const markerAnchors = extractAnchorsFromMarkers(md);
 
   const fnLineSet = new Set();
   for (const b of blocks) {
@@ -933,12 +1104,19 @@ function splitContent(md) {
 
   const commentParts = [];
   for (const b of blocks) {
-    for (let i = b.startLine; i < b.endLine; i++) commentParts.push(lines[i]);
-    commentParts.push('');
+    const blockLines = lines.slice(b.startLine, b.endLine);
+    const hasAnchor = /^\s*anchor:\s*"([^"]+)"/m.test(b.body);
+    const derivedAnchor = markerAnchors.get(b.id);
+    if (!hasAnchor && derivedAnchor) {
+      blockLines.splice(1, 0, `    anchor: "${derivedAnchor.replace(/"/g, '\\"')}"`, '');
+    }
+    commentParts.push(...blockLines, '');
   }
 
+  const cleanedDoc = stripInlineCommentMarkers(docLines.join('\n'));
+
   return {
-    doc: docLines.join('\n') + '\n',
+    doc: cleanedDoc.trimEnd() + '\n',
     comments: commentParts.join('\n').trim() + '\n'
   };
 }
@@ -971,14 +1149,25 @@ function setMarkdown(md) {
 }
 
 function toggleSidecar(enabled) {
+  const wasSidecar = sidecarMode;
   const md = getMarkdown();
+
+  let restoredInlineMd = md;
+  if (wasSidecar && !enabled) {
+    const doc = document.getElementById('editor-doc').value;
+    const comments = document.getElementById('editor-sidecar').value;
+    const threads = parseCommentThreads(comments);
+    const docWithMarkers = injectThreadMarkersFromSidecar(doc, threads);
+    restoredInlineMd = combineContent(docWithMarkers, stripSidecarAnchorMetadata(comments));
+  }
+
   sidecarMode = enabled;
   document.getElementById('hdr-inline').style.display = enabled ? 'none' : '';
   document.getElementById('body-inline').style.display = enabled ? 'none' : '';
   document.querySelectorAll('.sidecar-el').forEach(el => {
     el.style.display = enabled ? '' : 'none';
   });
-  setMarkdown(md);
+  setMarkdown(wasSidecar && !enabled ? restoredInlineMd : md);
   update();
 }
 
@@ -986,8 +1175,13 @@ function toggleSidecar(enabled) {
 
 function update() {
   const md = getMarkdown();
-  const threads = parseCommentThreads(md);
-  document.getElementById('preview').innerHTML = renderPreview(md);
+  const threads = sidecarMode
+    ? parseCommentThreads(document.getElementById('editor-sidecar').value)
+    : parseCommentThreads(md);
+  const previewMd = sidecarMode
+    ? injectThreadMarkersFromSidecar(document.getElementById('editor-doc').value, threads)
+    : md;
+  document.getElementById('preview').innerHTML = renderPreview(previewMd, threads);
   renderSidebar(threads);
 
   // Bind highlight/badge clicks
@@ -1103,39 +1297,42 @@ function submitComment() {
   const id = generateCommentId();
   const date = todayISO();
   let md = getMarkdown();
-
-  // Wrap the selected text with ==text==[^c-id] in the source
-  // We need to find the raw text in the markdown and wrap it.
-  // The selected text comes from the rendered preview, so we search for it in the source.
-  const escapedText = escapeRegex(text);
-  // Try to find the text not already wrapped in == ==
-  const wrapRegex = new RegExp('(?<!=)(' + escapedText + ')(?!\\=\\=)');
-  const matchInSource = md.match(wrapRegex);
-  if (matchInSource) {
-    md = md.replace(wrapRegex, `==$1==[^${id}]`);
-  } else {
-    // Fallback: just add a point comment at the end of the first matching line
-    const lineRegex = new RegExp('(.*' + escapedText.split(/\s+/).slice(0, 3).join('\\s+') + '.*)');
-    const lineMatch = md.match(lineRegex);
-    if (lineMatch) {
-      md = md.replace(lineMatch[0], lineMatch[0] + `[^${id}]`);
-    }
-  }
+  let commentsMd = sidecarMode ? document.getElementById('editor-sidecar').value : md;
 
   // Build the footnote definition
   const commentLines = comment.split('\n').map(l => `    > ${l}`).join('\n');
-  const fnDef = `\n[^${id}]:\n    anchor: "${text.replace(/"/g, '\\"').slice(0, 80)}"\n\n    @${author} (${date}):\n${commentLines}\n`;
 
-  // Find position to insert: before existing footnotes or at end
-  const fnPos = md.search(/\n\[\^c-/);
-  if (fnPos !== -1) {
-    md = md.slice(0, fnPos) + fnDef + md.slice(fnPos);
+  if (sidecarMode) {
+    const doc = document.getElementById('editor-doc').value;
+    const anchorText = deriveAnchorFromSelection(doc, text).replace(/"/g, '\\"');
+    const fnDef = `\n[^${id}]:\n    anchor: "${anchorText}"\n    anchor_occurrence: 1\n\n    @${author} (${date}):\n${commentLines}\n`;
+    commentsMd = commentsMd.trim();
+    commentsMd = commentsMd ? `${commentsMd}\n\n${fnDef.trim()}\n` : `${fnDef.trim()}\n`;
+    document.getElementById('editor-sidecar').value = commentsMd;
   } else {
-    // Add separator and footnote at end
-    md = md.trimEnd() + '\n\n---\n' + fnDef;
-  }
+    const fnDef = `\n[^${id}]:\n    @${author} (${date}):\n${commentLines}\n`;
+    // Wrap the selected text with ==text==[^c-id] in the source
+    const escapedText = escapeRegex(text);
+    const wrapRegex = new RegExp('(?<!=)(' + escapedText + ')(?!\\=\\=)');
+    const matchInSource = md.match(wrapRegex);
+    if (matchInSource) {
+      md = md.replace(wrapRegex, `==$1==[^${id}]`);
+    } else {
+      const lineRegex = new RegExp('(.*' + escapedText.split(/\s+/).slice(0, 3).join('\\s+') + '.*)');
+      const lineMatch = md.match(lineRegex);
+      if (lineMatch) {
+        md = md.replace(lineMatch[0], lineMatch[0] + `[^${id}]`);
+      }
+    }
 
-  setMarkdown(md);
+    const fnPos = md.search(/\n\[\^c-/);
+    if (fnPos !== -1) {
+      md = md.slice(0, fnPos) + fnDef + md.slice(fnPos);
+    } else {
+      md = md.trimEnd() + '\n\n---\n' + fnDef;
+    }
+    setMarkdown(md);
+  }
   closePopover();
   update();
   focusThread(id);
@@ -1155,7 +1352,7 @@ function addReply(threadId) {
 
   const author = document.getElementById('author-global').value.trim() || 'you';
   const date = todayISO();
-  let md = getMarkdown();
+  let md = sidecarMode ? document.getElementById('editor-sidecar').value : getMarkdown();
 
   // Find the footnote definition block for this thread
   const blocks = extractFootnoteBlocks(md);
@@ -1171,7 +1368,11 @@ function addReply(threadId) {
   lines.splice(block.endLine, 0, '', replyBlock);
   md = lines.join('\n');
 
-  setMarkdown(md);
+  if (sidecarMode) {
+    document.getElementById('editor-sidecar').value = md;
+  } else {
+    setMarkdown(md);
+  }
   update();
   focusThread(threadId);
 
@@ -1180,6 +1381,22 @@ function addReply(threadId) {
     const newInput = document.getElementById('reply-' + threadId);
     if (newInput) newInput.focus();
   }, 50);
+}
+
+function removeThread(threadId) {
+  const ok = window.confirm(`Remove thread ${threadId}?`);
+  if (!ok) return;
+
+  if (sidecarMode) {
+    const commentsEl = document.getElementById('editor-sidecar');
+    commentsEl.value = removeThreadFromMarkdown(commentsEl.value, threadId, false).trim() + '\n';
+  } else {
+    const md = getMarkdown();
+    setMarkdown(removeThreadFromMarkdown(md, threadId, true));
+  }
+
+  if (activeThread === threadId) activeThread = null;
+  update();
 }
 
 // ─── Load Sample ───────────────────────────────────────────────────

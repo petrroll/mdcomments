@@ -25,7 +25,7 @@ The ==monthly revenue grew by 15%==[^c-rev1] last quarter.
     > Yes. Added a clarifying note.
 ```
 
-For large documents, thread definitions can live in a companion `document.comments.md` file — still plain Markdown, still human-readable.
+For large documents, thread definitions can live in a companion `document.comments.md` file — still plain Markdown, still human-readable. In markerless sidecar workflows, each sidecar thread must define `anchor:` (with optional `anchor_occurrence:`) so matching in `document.md` is unambiguous.
 
 In any standard Markdown renderer, comments degrade gracefully to ordinary footnotes — nothing breaks, nothing is lost.
 
