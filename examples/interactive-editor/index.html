@@ -1359,13 +1359,24 @@ function addReply(threadId) {
   const block = blocks.find(b => b.id === threadId);
   if (!block) return;
 
-  const replyLines = text.split('\n').map(l => `    > ${l}`).join('\n');
-  const replyBlock = `    @${author} (${date}):\n${replyLines}`;
+  const replyHeader = `    @${author} (${date}):`;
+  const replyBodyLines = text.split('\n').map(l => `    > ${l}`);
 
-  // Insert reply at the end of this footnote block (before the line at endLine)
+  // Insert reply at the logical end of this footnote block, trimming any
+  // trailing blank lines first so spacing stays stable across multiple replies.
   const lines = md.split('\n');
-  // Insert just before endLine (which is the first line after the block)
-  lines.splice(block.endLine, 0, '', replyBlock);
+  let insertAt = block.endLine;
+  while (insertAt > block.startLine + 1 && lines[insertAt - 1] === '') {
+    insertAt--;
+  }
+
+  const linesToInsert = [];
+  if (lines[insertAt - 1] !== '') {
+    linesToInsert.push('');
+  }
+  linesToInsert.push(replyHeader, ...replyBodyLines);
+
+  lines.splice(insertAt, 0, ...linesToInsert);
   md = lines.join('\n');
 
   if (sidecarMode) {
