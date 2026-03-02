@@ -127,6 +127,49 @@ body {
   cursor: not-allowed;
 }
 
+/* Sidecar toggle */
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.toggle-label input { display: none; }
+.toggle-switch {
+  position: relative;
+  width: 2rem;
+  height: 1.1rem;
+  background: var(--border);
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+.toggle-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 0.85rem;
+  height: 0.85rem;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-label input:checked + .toggle-switch {
+  background: var(--accent);
+}
+.toggle-label input:checked + .toggle-switch::after {
+  transform: translateX(0.9rem);
+}
+
+/* Sidecar separator */
+.sidecar-separator {
+  border-top: 2px solid var(--accent) !important;
+}
+
 /* --- Main layout --- */
 .main {
   flex: 1;
@@ -174,7 +217,7 @@ body {
   padding: 0;
 }
 
-#editor {
+#editor, #editor-doc, #editor-sidecar {
   width: 100%;
   height: 100%;
   border: none;
@@ -515,15 +558,28 @@ body {
   <label class="toolbar-hint" for="author-global">Author:</label>
   <input id="author-global" type="text" value="you" style="width:5.5rem;padding:0.25rem 0.4rem;font-size:0.78rem;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--fg);outline:none;">
   <button class="btn" onclick="loadSample()" title="Load sample document">Load Sample</button>
+  <label class="toggle-label" title="Split comments into a separate sidecar file">
+    <input type="checkbox" id="sidecar-toggle" onchange="toggleSidecar(this.checked)">
+    <span class="toggle-switch"></span>
+    Sidecar .md
+  </label>
 </div>
 
 <!-- Main 3-pane layout -->
 <div class="main">
   <!-- Editor pane -->
   <div class="pane pane-editor">
-    <div class="pane-header"><span class="icon">📝</span> Markdown Source</div>
-    <div class="pane-body">
+    <div class="pane-header" id="hdr-inline"><span class="icon">📝</span> Markdown Source</div>
+    <div class="pane-body" id="body-inline">
       <textarea id="editor" spellcheck="false"></textarea>
+    </div>
+    <div class="pane-header sidecar-el" style="display:none"><span class="icon">📝</span> document.md</div>
+    <div class="pane-body sidecar-el" style="display:none">
+      <textarea id="editor-doc" spellcheck="false"></textarea>
+    </div>
+    <div class="pane-header sidecar-el sidecar-separator" style="display:none"><span class="icon">💬</span> document.comments.md</div>
+    <div class="pane-body sidecar-el" style="display:none">
+      <textarea id="editor-sidecar" spellcheck="false"></textarea>
     </div>
   </div>
 
@@ -856,10 +912,80 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ─── Sidecar Mode ──────────────────────────────────────────────────
+
+let sidecarMode = false;
+
+function splitContent(md) {
+  const lines = md.split('\n');
+  const blocks = extractFootnoteBlocks(md);
+  if (blocks.length === 0) return { doc: md.trimEnd() + '\n', comments: '' };
+
+  const fnLineSet = new Set();
+  for (const b of blocks) {
+    for (let i = b.startLine; i < b.endLine; i++) fnLineSet.add(i);
+  }
+
+  let docLines = lines.filter((_, i) => !fnLineSet.has(i));
+  while (docLines.length && docLines[docLines.length - 1].trim() === '') docLines.pop();
+  if (docLines.length && docLines[docLines.length - 1].trim() === '---') docLines.pop();
+  while (docLines.length && docLines[docLines.length - 1].trim() === '') docLines.pop();
+
+  const commentParts = [];
+  for (const b of blocks) {
+    for (let i = b.startLine; i < b.endLine; i++) commentParts.push(lines[i]);
+    commentParts.push('');
+  }
+
+  return {
+    doc: docLines.join('\n') + '\n',
+    comments: commentParts.join('\n').trim() + '\n'
+  };
+}
+
+function combineContent(doc, comments) {
+  const d = doc.trimEnd();
+  const c = comments.trim();
+  if (!c) return d + '\n';
+  return d + '\n\n---\n\n' + c + '\n';
+}
+
+function getMarkdown() {
+  if (sidecarMode) {
+    return combineContent(
+      document.getElementById('editor-doc').value,
+      document.getElementById('editor-sidecar').value
+    );
+  }
+  return document.getElementById('editor').value;
+}
+
+function setMarkdown(md) {
+  if (sidecarMode) {
+    const { doc, comments } = splitContent(md);
+    document.getElementById('editor-doc').value = doc;
+    document.getElementById('editor-sidecar').value = comments;
+  } else {
+    document.getElementById('editor').value = md;
+  }
+}
+
+function toggleSidecar(enabled) {
+  const md = getMarkdown();
+  sidecarMode = enabled;
+  document.getElementById('hdr-inline').style.display = enabled ? 'none' : '';
+  document.getElementById('body-inline').style.display = enabled ? 'none' : '';
+  document.querySelectorAll('.sidecar-el').forEach(el => {
+    el.style.display = enabled ? '' : 'none';
+  });
+  setMarkdown(md);
+  update();
+}
+
 // ─── Core Update Loop ──────────────────────────────────────────────
 
 function update() {
-  const md = document.getElementById('editor').value;
+  const md = getMarkdown();
   const threads = parseCommentThreads(md);
   document.getElementById('preview').innerHTML = renderPreview(md);
   renderSidebar(threads);
@@ -976,8 +1102,7 @@ function submitComment() {
 
   const id = generateCommentId();
   const date = todayISO();
-  const editor = document.getElementById('editor');
-  let md = editor.value;
+  let md = getMarkdown();
 
   // Wrap the selected text with ==text==[^c-id] in the source
   // We need to find the raw text in the markdown and wrap it.
@@ -1010,7 +1135,7 @@ function submitComment() {
     md = md.trimEnd() + '\n\n---\n' + fnDef;
   }
 
-  editor.value = md;
+  setMarkdown(md);
   closePopover();
   update();
   focusThread(id);
@@ -1030,8 +1155,7 @@ function addReply(threadId) {
 
   const author = document.getElementById('author-global').value.trim() || 'you';
   const date = todayISO();
-  const editor = document.getElementById('editor');
-  let md = editor.value;
+  let md = getMarkdown();
 
   // Find the footnote definition block for this thread
   const blocks = extractFootnoteBlocks(md);
@@ -1047,7 +1171,7 @@ function addReply(threadId) {
   lines.splice(block.endLine, 0, '', replyBlock);
   md = lines.join('\n');
 
-  editor.value = md;
+  setMarkdown(md);
   update();
   focusThread(threadId);
 
@@ -1061,13 +1185,15 @@ function addReply(threadId) {
 // ─── Load Sample ───────────────────────────────────────────────────
 
 function loadSample() {
-  document.getElementById('editor').value = SAMPLE_MD;
+  setMarkdown(SAMPLE_MD);
   update();
 }
 
 // ─── Init ──────────────────────────────────────────────────────────
 
 document.getElementById('editor').addEventListener('input', update);
+document.getElementById('editor-doc').addEventListener('input', update);
+document.getElementById('editor-sidecar').addEventListener('input', update);
 
 // Close popover when clicking outside
 document.addEventListener('mousedown', (e) => {
