@@ -1,0 +1,15 @@
+{
+  "name": "mdcomments-markdown-it-example",
+  "private": true,
+  "description": "mdcomments rendering example using markdown-it",
+  "scripts": {
+    "build": "node build-default.js && node build-plugin.js",
+    "build:default": "node build-default.js",
+    "build:plugin": "node build-plugin.js"
+  },
+  "dependencies": {
+    "markdown-it": "^14.0.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-mark": "^4.0.0"
+  }
+}

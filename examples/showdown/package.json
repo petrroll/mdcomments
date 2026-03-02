@@ -1,0 +1,13 @@
+{
+  "name": "mdcomments-showdown-example",
+  "private": true,
+  "description": "mdcomments rendering example using showdown",
+  "scripts": {
+    "build": "node build-default.js && node build-plugin.js",
+    "build:default": "node build-default.js",
+    "build:plugin": "node build-plugin.js"
+  },
+  "dependencies": {
+    "showdown": "^2.1.0"
+  }
+}

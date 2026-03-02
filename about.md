@@ -28,3 +28,7 @@ The ==monthly revenue grew by 15%==[^c-rev1] last quarter.
 For large documents, thread definitions can live in a companion `document.comments.md` file — still plain Markdown, still human-readable.
 
 In any standard Markdown renderer, comments degrade gracefully to ordinary footnotes — nothing breaks, nothing is lost.
+
+## Examples
+
+See [cross-parser examples](examples/) for a side-by-side comparison of how mdcomments renders across five Markdown systems (markdown-it, Pandoc, MkDocs, Showdown, and Comrak), both with default settings and with purpose-built plugins.

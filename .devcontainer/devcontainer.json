@@ -1,0 +1,8 @@
+{
+  "name": "mdcomments",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "ghcr.io/jsburckhardt/devcontainer-features/just:1": {}
+  },
+  "postCreateCommand": "just install"
+}

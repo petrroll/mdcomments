@@ -1,0 +1,276 @@
+/* style-plugin.css — Full mdcomments UI: sidebar, highlights, threads */
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --link: #2563eb;
+  --mark-bg: #fef9c3;
+  --mark-border: #facc15;
+  --mark-hover: #fde68a;
+  --fn-bg: #f9fafb;
+  --sidebar-bg: #f9fafb;
+  --sidebar-w: 22rem;
+  --comment-bg: #ffffff;
+  --comment-border: #e5e7eb;
+  --comment-hover: #f3f4f6;
+  --badge-open-bg: #dbeafe;
+  --badge-open-fg: #1d4ed8;
+  --badge-resolved-bg: #dcfce7;
+  --badge-resolved-fg: #15803d;
+  --avatar-bg: #818cf8;
+  --avatar-fg: #ffffff;
+  --reply-indent: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111827;
+    --fg: #f3f4f6;
+    --muted: #9ca3af;
+    --border: #374151;
+    --link: #60a5fa;
+    --mark-bg: #422006;
+    --mark-border: #a16207;
+    --mark-hover: #713f12;
+    --fn-bg: #1f2937;
+    --sidebar-bg: #1f2937;
+    --comment-bg: #111827;
+    --comment-border: #374151;
+    --comment-hover: #1f2937;
+    --badge-open-bg: #1e3a5f;
+    --badge-open-fg: #93c5fd;
+    --badge-resolved-bg: #14532d;
+    --badge-resolved-fg: #86efac;
+    --avatar-bg: #6366f1;
+    --avatar-fg: #ffffff;
+  }
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.7;
+  color: var(--fg);
+  background: var(--bg);
+  margin: 0;
+  padding: 0;
+}
+
+/* --- Layout: content + sidebar --- */
+.mdcomments-page {
+  display: flex;
+  min-height: 100vh;
+}
+
+.mdcomments-content {
+  flex: 1;
+  max-width: 48rem;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  padding-right: calc(var(--sidebar-w) + 2rem);
+}
+
+.mdcomments-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--sidebar-bg);
+  border-left: 1px solid var(--border);
+  padding: 1.5rem 1rem;
+}
+
+.mdcomments-sidebar-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* --- Highlight in text --- */
+.mdcomment-highlight {
+  background: var(--mark-bg);
+  border-bottom: 2px solid var(--mark-border);
+  padding: 0.05em 0.15em;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+.mdcomment-highlight:hover,
+.mdcomment-highlight.active {
+  background: var(--mark-hover);
+}
+
+/* --- Inline comment indicator badge --- */
+.mdcomment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2em;
+  height: 1.2em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--badge-open-fg);
+  background: var(--badge-open-bg);
+  border-radius: 50%;
+  vertical-align: super;
+  margin-left: 0.15em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s;
+}
+.mdcomment-badge:hover { transform: scale(1.15); text-decoration: none; }
+.mdcomment-badge[data-status="resolved"] {
+  color: var(--badge-resolved-fg);
+  background: var(--badge-resolved-bg);
+}
+
+/* --- Thread card in sidebar --- */
+.mdcomment-thread {
+  background: var(--comment-bg);
+  border: 1px solid var(--comment-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  transition: border-color 0.15s;
+}
+.mdcomment-thread:hover,
+.mdcomment-thread.active {
+  border-color: var(--link);
+}
+
+.mdcomment-thread-anchor {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mdcomment-thread-anchor::before {
+  content: "📌 ";
+}
+
+/* Status badge inside thread */
+.mdcomment-status {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15em 0.5em;
+  border-radius: 999px;
+  margin-bottom: 0.4rem;
+}
+.mdcomment-status-open {
+  color: var(--badge-open-fg);
+  background: var(--badge-open-bg);
+}
+.mdcomment-status-resolved {
+  color: var(--badge-resolved-fg);
+  background: var(--badge-resolved-bg);
+}
+
+/* --- Individual comment entry --- */
+.mdcomment-entry {
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--comment-border);
+}
+.mdcomment-entry:first-child {
+  border-top: none;
+}
+
+.mdcomment-author-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.mdcomment-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--avatar-bg);
+  color: var(--avatar-fg);
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mdcomment-author {
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.mdcomment-date {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.mdcomment-body {
+  margin: 0;
+  padding-left: calc(1.5rem + 0.4rem); /* avatar width + gap */
+  color: var(--fg);
+  line-height: 1.5;
+}
+.mdcomment-body p { margin: 0.2rem 0; }
+.mdcomment-body blockquote {
+  border-left: 2px solid var(--border);
+  margin: 0.3rem 0;
+  padding: 0.15rem 0.6rem;
+  color: var(--muted);
+}
+
+/* --- Responsive: collapse sidebar on narrow screens --- */
+@media (max-width: 72rem) {
+  .mdcomments-content {
+    padding-right: 1.5rem;
+    max-width: none;
+  }
+  .mdcomments-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+}
+
+/* --- Typography (same as default) --- */
+h1, h2, h3 { margin-top: 2rem; }
+h1 { font-size: 1.8rem; border-bottom: 2px solid var(--border); padding-bottom: 0.4rem; }
+h2 { font-size: 1.4rem; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+blockquote { border-left: 3px solid var(--border); margin: 0.5rem 0; padding: 0.25rem 1rem; color: var(--muted); }
+code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; background: var(--fn-bg); padding: 0.15em 0.3em; border-radius: 3px; }
+pre { background: var(--fn-bg); padding: 1rem; border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* Hide the original footnotes section when plugin is active */
+.mdcomments-page .footnotes,
+.mdcomments-page .footnote,
+.mdcomments-page section[role="doc-endnotes"] {
+  display: none;
+}
