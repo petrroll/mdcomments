@@ -233,4 +233,4 @@ Footnotes solve all three: they degrade to visible references, threading is natu
 
 Every alternative either lacks structure (HTML comments, `%%`, ref-links) or locks you into a platform (HackMD, Notion, sidecar JSON). CriticMarkup comes closest but lacks threading and collides with attribute syntax.
 
-mdcomments is the only approach that is **structured, threaded, attributed, portable, and built entirely from standard Markdown primitives**.
+mdcomments is the only approach that is **structured, threaded, attributed, portable, and built entirely from standard Markdown primitives**. It also supports **span anchoring** via `==text==[^c-id]` and an optional **companion file** (`document.comments.md`) for large documents.

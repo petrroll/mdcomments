@@ -4,7 +4,7 @@ A proposal for native comments in Markdown — structured, portable, and built f
 
 ## What
 
-A lightweight comment format for Markdown files that supports anchoring, authorship, timestamps, threading, and metadata — using only standard footnotes, blockquotes, and @-mentions.
+A lightweight comment format for Markdown files that supports anchoring, span highlighting, authorship, timestamps, threading, and metadata — using only standard footnotes, blockquotes, and @-mentions.
 
 ## Why
 
@@ -12,10 +12,10 @@ Markdown is rapidly becoming the universal format for LLM-generated and LLM-cons
 
 ## How
 
-Inline `[^c-id]` footnote markers anchor comments to specific text. Comment threads are defined at the bottom of the document using standard footnote syntax, with `@author (date):` lines and blockquoted messages:
+Inline `[^c-id]` footnote markers anchor comments to specific text. For multi-word spans, `==highlighted text==[^c-id]` marks the range. Comment threads are defined at the bottom of the document using standard footnote syntax, with `@author (date):` lines and blockquoted messages:
 
 ```markdown
-Revenue grew by 15%[^c-rev1] last quarter.
+The ==monthly revenue grew by 15%==[^c-rev1] last quarter.
 
 [^c-rev1]:
     @alice (2026-02-10):
@@ -24,5 +24,7 @@ Revenue grew by 15%[^c-rev1] last quarter.
     @bob (2026-02-11):
     > Yes. Added a clarifying note.
 ```
+
+For large documents, thread definitions can live in a companion `document.comments.md` file — still plain Markdown, still human-readable.
 
 In any standard Markdown renderer, comments degrade gracefully to ordinary footnotes — nothing breaks, nothing is lost.

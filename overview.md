@@ -227,13 +227,13 @@ the platform's database and **stripped from Markdown exports**.
 
 ## Other Notable Tools
 
-| Tool                | Comment mechanism                    | Notes                                                              |
-| ------------------- | ------------------------------------ | ------------------------------------------------------------------ |
-| **Quarto**          | `#\| comment:` in code cells        | Code-only, not for prose                                           |
-| **Moment.dev**      | Local-first collaborative Markdown   | Stores docs as `.md` in Git; collaboration features in development |
-| **Obsidian Callouts** | `> [!NOTE]` / `> [!WARNING]`      | Visible admonitions, not hidden comments                           |
-| **Docsify**         | HTML comments + page-level plugins   | No inline comments; uses Utterances/Disqus for page comments       |
-| **Typora / iA Writer** | HTML `<!-- -->` only             | No unique comment mechanism beyond standard HTML comments           |
+| Tool                    | Comment mechanism                  | Notes                                                              |
+| ----------------------- | ---------------------------------- | ------------------------------------------------------------------ |
+| **Quarto**              | `#\| comment:` in code cells      | Code-only, not for prose                                           |
+| **Moment.dev**          | Local-first collaborative Markdown | Stores docs as `.md` in Git; collaboration features in development |
+| **Obsidian Callouts**   | `> [!NOTE]` / `> [!WARNING]`      | Visible admonitions, not hidden comments                           |
+| **Docsify**             | HTML comments + page-level plugins | No inline comments; uses Utterances/Disqus for page comments       |
+| **Typora / iA Writer**  | HTML `<!-- -->` only               | No unique comment mechanism beyond standard HTML comments           |
 
 ---
 
@@ -288,6 +288,28 @@ The monthly revenue grew by 15%[^c-rev1] and user retention
 improved across all cohorts[^c-ret1].
 ```
 
+### Spanning multiple words
+
+To anchor a comment to a range of text, use `==...==` (mark/highlight syntax)
+with the ref attached:
+
+```markdown
+The ==[monthly revenue grew by 15%]==[^c-rev1] and user retention improved.
+```
+
+For parsers that don't support `==`, place the ref at the end of the phrase and
+use an `anchor:` metadata line in the thread definition as a fallback:
+
+```markdown
+The monthly revenue grew by 15%[^c-rev1] and user retention improved.
+
+[^c-rev1]:
+    anchor: "monthly revenue grew by 15%"
+
+    @alice (2026-02-10):
+    > Are we comparing YoY?
+```
+
 ### Thread definitions (bottom of document)
 
 ```markdown
@@ -308,9 +330,25 @@ improved across all cohorts[^c-ret1].
     > Can we break this down by cohort in an appendix?
 ```
 
+### Companion file alternative
+
+For large documents, comment threads can live in a separate file using the same
+syntax, keeping the main document clean:
+
+```
+document.md                ← contains only [^c-id] refs in prose
+document.comments.md       ← contains all [^c-id]: thread definitions
+```
+
+This is analogous to ChobbyCode's sidecar approach but remains plain Markdown
+and human-readable.
+
+### Summary
+
 | Aspect       | Detail                                            |
 | ------------ | ------------------------------------------------- |
 | Anchoring    | ✅ Inline `[^c-id]` at exact text location        |
+| Span anchor  | ✅ `==text==[^c-id]` or `anchor:` metadata line   |
 | Author       | ✅ `@author` lines                                |
 | Date         | ✅ `(YYYY-MM-DD)` timestamps                      |
 | Threading    | ✅ Sequential `@author` entries in one definition  |
@@ -318,6 +356,7 @@ improved across all cohorts[^c-ret1].
 | Prose impact | ✅ Only a tiny `[^c-id]` marker in the prose       |
 | Portability  | ✅ Degrades to standard footnotes in any parser    |
 | Extensible   | ✅ Suggestions, reactions, visibility tags          |
+| Large docs   | ✅ Optional companion `document.comments.md` file  |
 
 ### Syntax collision notes
 

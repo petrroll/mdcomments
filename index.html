@@ -185,7 +185,7 @@
       Markdown is rapidly becoming the universal format for LLM-generated and
       LLM-consumed content. Yet there is no portable way to annotate it with
       structured comments. Existing solutions are either unstructured
-      (HTML&nbsp;comments, <code>%%</code>) or platform-locked (HackMD, Notion,
+      (HTML&nbsp;comments, <code>%%</code>, CriticMarkup, kramdown) or platform-locked (HackMD, Notion,
       sidecar&nbsp;JSON).
     </p>
     <p>
@@ -233,7 +233,7 @@
       Comment threads are defined at the bottom of the document using standard
       footnote syntax, with <code>@author (date):</code> lines and blockquoted messages:
     </p>
-    <pre><code>Revenue grew by 15%[^c-rev1] last quarter.
+    <pre><code>The ==monthly revenue grew by 15%==[^c-rev1] last quarter.
 
 [^c-rev1]:
     @alice (2026-02-10):
@@ -241,6 +241,17 @@
 
     @bob (2026-02-11):
     &gt; Yes. Added a clarifying note.</code></pre>
+    <p>
+      To anchor a comment to a <strong>range of text</strong>, wrap it in
+      <code>==...==</code> (mark/highlight syntax) with the ref attached.
+      For parsers that don't support <code>==</code>, an <code>anchor:</code>
+      metadata line in the thread definition serves as a fallback.
+    </p>
+    <p>
+      For large documents, thread definitions can live in a companion
+      <code>document.comments.md</code> file — still plain Markdown, still
+      human-readable.
+    </p>
     <p>
       In any standard Markdown renderer, comments degrade gracefully to ordinary
       footnotes — nothing breaks, nothing is lost.
