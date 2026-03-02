@@ -166,6 +166,7 @@
     and <code>markdown-it-mark</code> plugins for footnote and <code>==highlight==</code>
     support. Without them, <code>[^c-rev1]</code> and <code>==text==</code> render
     as literal text. With the plugins, mdcomments degrade gracefully to numbered footnotes.
+    <br><a href="https://github.com/petrroll/mdcomments/blob/main/examples/markdown-it/plugin-mdcomments.js" style="color:var(--link);font-size:0.8rem;">View plugin source on GitHub →</a>
   </p>
   <div class="comparison">
     <div class="frame-card">
@@ -185,6 +186,7 @@
     <strong>Pandoc</strong> — footnotes are built-in; <code>==text==</code> is <em>not</em>
     supported natively (passes through as literal text). The Lua filter implements full
     mdcomments rendering including mark/highlight support, sidebar threads, and PDF output.
+    <br><a href="https://github.com/petrroll/mdcomments/blob/main/examples/pandoc/filter-mdcomments.lua" style="color:var(--link);font-size:0.8rem;">View filter source on GitHub →</a>
   </p>
   <div class="comparison">
     <div class="frame-card">
@@ -214,6 +216,7 @@
     <strong>MkDocs</strong> (Python-Markdown + pymdownx) — requires enabling the
     <code>footnotes</code> and <code>pymdownx.mark</code> extensions. The custom
     Python-Markdown extension transforms comment footnotes into sidebar threads.
+    <br><a href="https://github.com/petrroll/mdcomments/blob/main/examples/mkdocs/mdcomments_ext/__init__.py" style="color:var(--link);font-size:0.8rem;">View extension source on GitHub →</a>
   </p>
   <div class="comparison">
     <div class="frame-card">
@@ -244,6 +247,7 @@
     but no <code>==mark==</code> support. Footnote handling is limited; nested
     blockquotes in footnotes can be unreliable. The plugin uses Showdown's regex
     extension API to pre-process mdcomment syntax.
+    <br><a href="https://github.com/petrroll/mdcomments/blob/main/examples/showdown/ext-mdcomments.js" style="color:var(--link);font-size:0.8rem;">View extension source on GitHub →</a>
   </p>
   <div class="comparison">
     <div class="frame-card">
@@ -264,6 +268,7 @@
     <code>--extension footnotes</code>. No <code>==mark==</code> support. The
     Rust plugin walks the AST to detect <code>c-</code> prefixed footnotes and
     transforms them into comment sidebar HTML.
+    <br><a href="https://github.com/petrroll/mdcomments/blob/main/examples/comrak/src/main.rs" style="color:var(--link);font-size:0.8rem;">View plugin source on GitHub →</a>
   </p>
   <div class="comparison">
     <div class="frame-card">
