@@ -29,6 +29,14 @@ For large documents, thread definitions can live in a companion `document.commen
 
 In any standard Markdown renderer, comments degrade gracefully to ordinary footnotes — nothing breaks, nothing is lost.
 
+## Formal Specification
+
+See [`specification.md`](specification.md) for the normative mdcomments format definition, including:
+
+- normal (single-file) format
+- sidecar (`document.comments.md`) format
+- EBNF grammar and validation rules
+
 ## Examples
 
 See [cross-parser examples](examples/) for a side-by-side comparison of how mdcomments renders across five Markdown systems (markdown-it, Pandoc, MkDocs, Showdown, and Comrak), both with default settings and with purpose-built plugins.

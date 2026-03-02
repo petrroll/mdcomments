@@ -2,6 +2,8 @@
 
 An explanation of the design choices behind mdcomments and the alternatives we considered.
 
+For the normative syntax and grammar, see [`specification.md`](specification.md).
+
 ---
 
 ## Design Goals
