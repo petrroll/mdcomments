@@ -39,8 +39,8 @@ jobs:
       # ── Dependencies ──
       - name: Install npm dependencies
         run: |
-          (cd examples/markdown-it && npm ci --silent)
-          (cd examples/showdown   && npm ci --silent)
+          (cd examples/markdown-it && npm install --silent)
+          (cd examples/showdown   && npm install --silent)
 
       - name: Install Python dependencies
         run: pip install -q -r examples/mkdocs/requirements.txt
