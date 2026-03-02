@@ -227,22 +227,41 @@ class MdcommentsTreeprocessor(Treeprocessor):
             sup.set("title", f"Comment thread: {thread_id}")
             sup.text = "💬"
 
-        # Mark <mark> elements that are associated with comment refs
-        # Look for <mark> elements followed by a comment badge
+        # Mark <mark> elements associated with comment badges.
+        # We only tag a <mark> when its immediate next sibling is
+        # an mdcomment badge (<a class="mdcomment-badge" ...>💬</a>).
         for mark in root.iter("mark"):
-            # Check next sibling for comment badge
             parent = None
+            mark_index = -1
             for p in root.iter():
                 children = list(p)
                 for i, child in enumerate(children):
                     if child is mark:
                         parent = p
+                        mark_index = i
                         break
                 if parent:
                     break
 
-            if parent is not None:
-                mark.set("class", "mdcomment-highlight")
+            if parent is None or mark_index < 0:
+                continue
+
+            siblings = list(parent)
+            if mark_index + 1 >= len(siblings):
+                continue
+
+            next_sibling = siblings[mark_index + 1]
+            if next_sibling.tag != "a":
+                continue
+
+            classes = (next_sibling.get("class") or "").split()
+            if "mdcomment-badge" not in classes:
+                continue
+
+            existing = (mark.get("class") or "").split()
+            if "mdcomment-highlight" not in existing:
+                existing.append("mdcomment-highlight")
+                mark.set("class", " ".join(existing))
 
 
 class MdcommentsPostprocessor(Postprocessor):

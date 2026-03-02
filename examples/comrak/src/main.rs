@@ -156,22 +156,28 @@ fn parse_thread_from_text(text: &str) -> Option<CommentThread> {
 
         // Metadata lines (before any @author entry)
         if entries.is_empty() {
-            if let Some(rest) = trimmed.strip_prefix("status:") {
-                meta_status = Some(rest.trim().to_string());
-                continue;
-            }
-            if let Some(rest) = trimmed.strip_prefix("anchor:") {
-                let val = rest.trim();
-                let val = val
-                    .strip_prefix('"')
-                    .and_then(|v| v.strip_suffix('"'))
-                    .or_else(|| {
-                        val.strip_prefix('\'')
-                            .and_then(|v| v.strip_suffix('\''))
-                    })
-                    .unwrap_or(val);
-                meta_anchor = Some(val.to_string());
-                continue;
+            if let Some((key, value)) = trimmed.split_once(':') {
+                let key = key.trim();
+                let value = value.trim();
+
+                if key.eq_ignore_ascii_case("status") {
+                    meta_status = Some(value.to_string());
+                    continue;
+                }
+
+                if key.eq_ignore_ascii_case("anchor") {
+                    let val = value
+                        .strip_prefix('"')
+                        .and_then(|v| v.strip_suffix('"'))
+                        .or_else(|| {
+                            value
+                                .strip_prefix('\'')
+                                .and_then(|v| v.strip_suffix('\''))
+                        })
+                        .unwrap_or(value);
+                    meta_anchor = Some(val.to_string());
+                    continue;
+                }
             }
         }
 
@@ -348,7 +354,7 @@ fn build_plugin(input: &str, template: &str, options: &Options) {
         })
         .collect();
 
-    let mark_re = regex_lite::Regex::new(r"==([^=]+)==").unwrap();
+    let mark_re = regex_lite::Regex::new(r"==(.+?)==").unwrap();
     for (node, text_content) in &mark_nodes {
         if mark_re.is_match(text_content) {
             let replaced =

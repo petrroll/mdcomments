@@ -16,24 +16,43 @@
 local threads = {}
 local thread_order = {}
 
--- Pre-extract c- footnote labels from source (in reference order)
--- Pandoc's Note element does not carry the original label, so we read
--- the source and match labels to Note elements by document order.
-local c_labels_in_ref_order = {}
-local c_labels_seen = {}
+-- Pre-extract footnote labels from source (in reference order).
+-- Pandoc's Note element does not carry the original label, so we map
+-- Note callbacks to source labels by encounter order.
+local labels_in_ref_order = {}
 do
-  local input_path = pandoc.path.join(
-    {pandoc.path.directory(PANDOC_SCRIPT_FILE), "..", "input.md"})
-  local f = io.open(input_path, "r")
-  if f then
-    local src = f:read("*a")
-    f:close()
-    -- Collect c- ref labels in order of first appearance as [^c-xxx]
-    -- (references in the text, not definitions)
-    for label in src:gmatch("%[%^(c%-[^%]]+)%]") do
-      if not c_labels_seen[label] then
-        c_labels_seen[label] = true
-        table.insert(c_labels_in_ref_order, label)
+  local source_paths = {}
+
+  if PANDOC_STATE and PANDOC_STATE.input_files then
+    for _, path in ipairs(PANDOC_STATE.input_files) do
+      table.insert(source_paths, path)
+    end
+  end
+
+  -- Fallback for example-local execution.
+  if #source_paths == 0 then
+    table.insert(source_paths, pandoc.path.join(
+      {pandoc.path.directory(PANDOC_SCRIPT_FILE), "..", "input.md"}))
+  end
+
+  local src = nil
+  for _, input_path in ipairs(source_paths) do
+    local f = io.open(input_path, "r")
+    if f then
+      src = f:read("*a")
+      f:close()
+      break
+    end
+  end
+
+  if src then
+    -- Collect labels from inline references only (skip definition headers).
+    for line in src:gmatch("[^\n]*\n?") do
+      local trimmed = line:match("^%s*(.-)%s*$")
+      if not trimmed:match("^%[%^[^%]]+%]:") then
+        for label in line:gmatch("%[%^([^%]]+)%]") do
+          table.insert(labels_in_ref_order, label)
+        end
       end
     end
   end
@@ -245,28 +264,24 @@ end
 -- ─── Note filter: detect c- prefixed footnotes ─────────────────────
 
 function Note(note)
-  -- Check content for mdcomments patterns
-  local text = ""
-  for _, block in ipairs(note.content) do
-    if block.t == "Para" or block.t == "Plain" then
-      text = text .. stringify(block.content) .. "\n"
-    end
-  end
+  note_counter = note_counter + 1
+  local label = labels_in_ref_order[note_counter]
 
-  -- Detect if this looks like an mdcomment (has @author lines)
-  if not text:match("@%w+%s*%(%d%d%d%d%-%d%d%-%d%d%)") then
-    return note  -- Not a comment, keep as regular footnote
+  -- Keep regular footnotes unchanged.
+  if not label or not starts_with(label, "c-") then
+    return note
   end
 
   local thread = parse_thread_content(note.content)
+  if #thread.entries == 0 then
+    return note
+  end
 
-  -- Assign the original c- label using pre-extracted order
-  note_counter = note_counter + 1
-  local thread_id = c_labels_in_ref_order[note_counter]
-    or ("c-thread-" .. note_counter)
-
-  table.insert(thread_order, thread_id)
-  threads[thread_id] = thread
+  local thread_id = label
+  if not threads[thread_id] then
+    table.insert(thread_order, thread_id)
+    threads[thread_id] = thread
+  end
 
   -- Replace the footnote with an inline comment badge
   local status = thread.meta.status or "open"

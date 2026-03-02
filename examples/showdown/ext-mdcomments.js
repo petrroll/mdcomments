@@ -22,7 +22,8 @@ function escapeHtml(str) {
 }
 
 function renderThread(id, thread) {
-  const status = thread.meta.status || 'open';
+  const rawStatus = (thread.meta.status || 'open').toLowerCase();
+  const status = rawStatus === 'resolved' ? 'resolved' : 'open';
   const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
   const statusClass = status === 'resolved'
     ? 'mdcomment-status-resolved'
@@ -115,6 +116,9 @@ function mdcommentsExtension() {
     {
       type: 'lang',
       filter: function(text) {
+        for (const key of Object.keys(threads)) delete threads[key];
+        threadOrder.length = 0;
+
         // Match footnote definitions: [^c-xxx]:\n    indented content...
         // The definition continues as long as lines are indented (4 spaces or tab)
         // or are blank (including blank lines between paragraphs within the def).
@@ -140,7 +144,8 @@ function mdcommentsExtension() {
           /==((?:(?!==).)+)==\[\^(c-[^\]]+)\]/g,
           function(match, highlighted, label) {
             const thread = threads[label];
-            const status = thread ? (thread.meta.status || 'open') : 'open';
+                 const rawStatus = thread ? (thread.meta.status || 'open').toLowerCase() : 'open';
+                 const status = rawStatus === 'resolved' ? 'resolved' : 'open';
             return `<mark class="mdcomment-highlight" data-thread="${escapeHtml(label)}" ` +
                    `data-status="${escapeHtml(status)}">${escapeHtml(highlighted)}</mark>` +
                    `<a class="mdcomment-badge" href="#thread-${escapeHtml(label)}" ` +
@@ -154,7 +159,8 @@ function mdcommentsExtension() {
           function(match, label) {
             const thread = threads[label];
             if (!thread) return match; // Not a known comment thread
-            const status = thread.meta.status || 'open';
+                 const rawStatus = (thread.meta.status || 'open').toLowerCase();
+                 const status = rawStatus === 'resolved' ? 'resolved' : 'open';
             return `<a class="mdcomment-badge" href="#thread-${escapeHtml(label)}" ` +
                    `data-status="${escapeHtml(status)}" title="Comment thread: ${label}">💬</a>`;
           }

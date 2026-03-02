@@ -103,11 +103,12 @@ function parseThreadTokens(tokens, md) {
  * Render a parsed thread as sidebar HTML.
  */
 function renderThread(id, thread) {
-  const status = thread.meta.status || 'open';
+  const rawStatus = (thread.meta.status || 'open').toLowerCase();
+  const status = rawStatus === 'resolved' ? 'resolved' : 'open';
   const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
   const statusClass = status === 'resolved' ? 'mdcomment-status-resolved' : 'mdcomment-status-open';
 
-  let html = `<div class="mdcomment-thread" id="thread-${id}" data-status="${status}">\n`;
+  let html = `<div class="mdcomment-thread" id="thread-${escapeHtml(id)}" data-status="${escapeHtml(status)}">\n`;
 
   // Anchor preview
   if (thread.meta.anchor) {
@@ -166,9 +167,11 @@ function mdcommentsPlugin(md) {
     const label = env.footnotes?.list?.[id]?.label || '';
 
     if (label.startsWith('c-')) {
-      const status = threads[label]?.meta?.status || 'open';
-      return `<a class="mdcomment-badge" href="#thread-${label}" data-status="${status}" ` +
-             `title="Comment thread: ${label}">💬</a>`;
+      const rawStatus = (threads[label]?.meta?.status || 'open').toLowerCase();
+      const status = rawStatus === 'resolved' ? 'resolved' : 'open';
+      const safeLabel = escapeHtml(label);
+      return `<a class="mdcomment-badge" href="#thread-${safeLabel}" data-status="${escapeHtml(status)}" ` +
+             `title="Comment thread: ${safeLabel}">💬</a>`;
     }
     return defaultFootnoteRef(tokens, idx, options, env, self);
   };
@@ -176,11 +179,6 @@ function mdcommentsPlugin(md) {
   // ---------------------------------------------------------------
   // 2. Override footnote block rendering to separate c- threads
   // ---------------------------------------------------------------
-  const defaultFootnoteOpen = md.renderer.rules.footnote_open;
-  const defaultFootnoteClose = md.renderer.rules.footnote_close;
-  const defaultFootnoteBlockOpen = md.renderer.rules.footnote_block_open;
-  const defaultFootnoteBlockClose = md.renderer.rules.footnote_block_close;
-
   // We intercept at the core level to parse footnote content.
   // markdown-it-footnote stores footnote body tokens in the main state.tokens
   // stream between footnote_open and footnote_close tokens (NOT in fn.tokens).
@@ -232,7 +230,7 @@ function mdcommentsPlugin(md) {
     // Check if the next few tokens contain a footnote_ref with c- prefix
     let hasCommentRef = false;
     let commentLabel = '';
-    for (let i = idx + 1; i < tokens.length && i < idx + 20; i++) {
+    for (let i = idx + 1; i < tokens.length; i++) {
       if (tokens[i].type === 'mark_close') break;
       if (tokens[i].type === 'footnote_ref') {
         const refId = tokens[i].meta?.id;
@@ -246,8 +244,9 @@ function mdcommentsPlugin(md) {
     }
 
     if (hasCommentRef) {
-      const status = threads[commentLabel]?.meta?.status || 'open';
-      return `<mark class="mdcomment-highlight" data-thread="${commentLabel}" data-status="${status}">`;
+      const rawStatus = (threads[commentLabel]?.meta?.status || 'open').toLowerCase();
+      const status = rawStatus === 'resolved' ? 'resolved' : 'open';
+      return `<mark class="mdcomment-highlight" data-thread="${escapeHtml(commentLabel)}" data-status="${escapeHtml(status)}">`;
     }
     if (defaultMarkOpen) return defaultMarkOpen(tokens, idx, options, env, self);
     return '<mark>';
