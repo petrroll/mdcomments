@@ -1,0 +1,92 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Toolchains ──
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pandoc weasyprint
+
+      # ── Dependencies ──
+      - name: Install npm dependencies
+        run: |
+          (cd examples/markdown-it && npm ci --silent)
+          (cd examples/showdown   && npm ci --silent)
+
+      - name: Install Python dependencies
+        run: pip install -q -r examples/mkdocs/requirements.txt
+
+      - name: Build Comrak binary
+        run: cd examples/comrak && cargo build --release
+
+      # ── Build examples ──
+      - name: Build all examples
+        run: bash examples/build-all.sh
+
+      # ── Assemble site ──
+      - name: Assemble site
+        run: |
+          mkdir -p _site/examples
+
+          # Root pages
+          cp index.html _site/
+          cp about.md overview.md rationale.md readme.md _site/ 2>/dev/null || true
+
+          # Examples: copy results viewer + built outputs
+          cp examples/results.html _site/examples/
+          for system in markdown-it pandoc mkdocs showdown comrak; do
+            if [ -d "examples/$system" ]; then
+              mkdir -p "_site/examples/$system"
+              cp examples/$system/output-*.html "_site/examples/$system/" 2>/dev/null || true
+              cp examples/$system/output-*.pdf  "_site/examples/$system/" 2>/dev/null || true
+            fi
+          done
+
+          # Interactive editor
+          mkdir -p _site/examples/interactive-editor
+          cp examples/interactive-editor/index.html _site/examples/interactive-editor/
+
+          # Shared CSS (referenced by some output HTMLs)
+          mkdir -p _site/examples/shared
+          cp examples/shared/*.css _site/examples/shared/
+
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

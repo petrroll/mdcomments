@@ -239,4 +239,4 @@ mdcomments is the only approach that is **structured, threaded, attributed, port
 
 ## See It in Action
 
-For working examples of how mdcomments renders across five different Markdown systems (markdown-it, Pandoc, MkDocs, Showdown, and Comrak) — both with default settings and purpose-built plugins — see the [cross-parser examples](examples/).
+For working examples of how mdcomments renders across five different Markdown systems (markdown-it, Pandoc, MkDocs, Showdown, and Comrak) — both with default settings and purpose-built plugins — see the [cross-parser examples](examples/). You can also try the [interactive editor](examples/interactive-editor/) to create and reply to comments in a live browser-based editor.

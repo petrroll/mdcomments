@@ -32,3 +32,5 @@ In any standard Markdown renderer, comments degrade gracefully to ordinary footn
 ## Examples
 
 See [cross-parser examples](examples/) for a side-by-side comparison of how mdcomments renders across five Markdown systems (markdown-it, Pandoc, MkDocs, Showdown, and Comrak), both with default settings and with purpose-built plugins.
+
+Try the [interactive editor](examples/interactive-editor/) — a browser-based WYSIWYG editor that lets you write Markdown and create threaded comments in real time, with the raw mdcomments syntax updating live.

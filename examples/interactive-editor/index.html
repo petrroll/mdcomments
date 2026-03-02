@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mdcomments — Interactive Editor</title>
+<!-- marked.js for Markdown rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --link: #2563eb;
+  --mark-bg: #fef9c3;
+  --mark-border: #facc15;
+  --mark-hover: #fde68a;
+  --sidebar-bg: #f9fafb;
+  --sidebar-w: 20rem;
+  --comment-bg: #ffffff;
+  --comment-border: #e5e7eb;
+  --badge-open-bg: #dbeafe;
+  --badge-open-fg: #1d4ed8;
+  --badge-resolved-bg: #dcfce7;
+  --badge-resolved-fg: #15803d;
+  --avatar-bg: #818cf8;
+  --avatar-fg: #ffffff;
+  --editor-bg: #1e293b;
+  --editor-fg: #e2e8f0;
+  --toolbar-bg: #f3f4f6;
+  --pane-header-bg: #f9fafb;
+  --accent: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --fg: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #334155;
+    --link: #60a5fa;
+    --mark-bg: #422006;
+    --mark-border: #a16207;
+    --mark-hover: #713f12;
+    --sidebar-bg: #1e293b;
+    --comment-bg: #0f172a;
+    --comment-border: #334155;
+    --badge-open-bg: #1e3a5f;
+    --badge-open-fg: #93c5fd;
+    --badge-resolved-bg: #14532d;
+    --badge-resolved-fg: #86efac;
+    --avatar-bg: #6366f1;
+    --editor-bg: #0f172a;
+    --editor-fg: #e2e8f0;
+    --toolbar-bg: #1e293b;
+    --pane-header-bg: #1e293b;
+    --accent: #3b82f6;
+  }
+}
+
+html, body { height: 100%; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* --- Top toolbar --- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.toolbar h1 {
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.toolbar-spacer { flex: 1; }
+
+.toolbar-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- Main layout --- */
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* --- Panes --- */
+.pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--pane-header-bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.pane-header .icon { font-size: 0.9rem; }
+
+.pane-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Editor pane */
+.pane-editor {
+  flex: 1;
+  border-right: 1px solid var(--border);
+}
+
+.pane-editor .pane-body {
+  padding: 0;
+}
+
+#editor {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 1rem;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  background: var(--editor-bg);
+  color: var(--editor-fg);
+  tab-size: 4;
+}
+
+/* Preview pane */
+.pane-preview {
+  flex: 1;
+  border-right: 1px solid var(--border);
+}
+
+.pane-preview .pane-body {
+  padding: 1.25rem 1.5rem;
+}
+
+/* Preview typography */
+.preview-content h1, .preview-content h2, .preview-content h3 { margin-top: 1.5rem; }
+.preview-content h1 { font-size: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.3rem; }
+.preview-content h2 { font-size: 1.2rem; }
+.preview-content h3 { font-size: 1.05rem; }
+.preview-content p { line-height: 1.7; margin: 0.6rem 0; }
+.preview-content a { color: var(--link); }
+.preview-content hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.preview-content blockquote { border-left: 3px solid var(--border); margin: 0.5rem 0; padding: 0.15rem 1rem; color: var(--muted); }
+.preview-content code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.88em; background: var(--sidebar-bg); padding: 0.1em 0.3em; border-radius: 3px; }
+.preview-content pre { background: var(--sidebar-bg); padding: 0.75rem; border-radius: 6px; overflow-x: auto; }
+.preview-content pre code { background: none; padding: 0; }
+.preview-content sup { font-size: 0.7em; }
+
+/* Comment highlights in preview */
+.cm-highlight {
+  background: var(--mark-bg);
+  border-bottom: 2px solid var(--mark-border);
+  padding: 0.05em 0.2em;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cm-highlight:hover,
+.cm-highlight.active {
+  background: var(--mark-hover);
+}
+
+.cm-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15em;
+  height: 1.15em;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--badge-open-fg);
+  background: var(--badge-open-bg);
+  border-radius: 50%;
+  vertical-align: super;
+  margin-left: 0.1em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s;
+}
+.cm-badge:hover { transform: scale(1.15); }
+.cm-badge[data-status="resolved"] {
+  color: var(--badge-resolved-fg);
+  background: var(--badge-resolved-bg);
+}
+
+/* Sidebar pane */
+.pane-sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+}
+
+.pane-sidebar .pane-body {
+  padding: 0.75rem;
+}
+
+/* Thread cards */
+.thread-card {
+  background: var(--comment-bg);
+  border: 1px solid var(--comment-border);
+  border-radius: 8px;
+  padding: 0.65rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.82rem;
+  transition: border-color 0.15s;
+  cursor: pointer;
+}
+.thread-card:hover,
+.thread-card.active {
+  border-color: var(--accent);
+}
+
+.thread-anchor {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.thread-anchor::before { content: "\1F4CC "; }
+
+.thread-status {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.12em 0.5em;
+  border-radius: 999px;
+  margin-bottom: 0.35rem;
+}
+.thread-status-open {
+  color: var(--badge-open-fg);
+  background: var(--badge-open-bg);
+}
+.thread-status-resolved {
+  color: var(--badge-resolved-fg);
+  background: var(--badge-resolved-bg);
+}
+
+.comment-entry {
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--comment-border);
+}
+.comment-entry:first-child { border-top: none; }
+
+.comment-author-line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.15rem;
+}
+
+.comment-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: var(--avatar-bg);
+  color: var(--avatar-fg);
+  font-size: 0.6rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.comment-author {
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.comment-date {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.comment-body {
+  padding-left: calc(1.35rem + 0.35rem);
+  line-height: 1.45;
+  font-size: 0.8rem;
+}
+
+/* Reply form */
+.reply-form {
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--comment-border);
+}
+
+.reply-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.reply-input {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--fg);
+  outline: none;
+}
+.reply-input:focus {
+  border-color: var(--accent);
+}
+
+.reply-btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 5px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+.reply-btn:hover { background: #1d4ed8; }
+
+/* No comments placeholder */
+.no-threads {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 2rem 0.5rem;
+  line-height: 1.6;
+}
+
+/* --- New-comment popover --- */
+.comment-popover {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 0.75rem;
+  width: 18rem;
+}
+.comment-popover.visible { display: block; }
+.comment-popover label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.comment-popover .selected-text {
+  font-size: 0.82rem;
+  font-style: italic;
+  padding: 0.3rem 0.5rem;
+  background: var(--mark-bg);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  max-height: 3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.comment-popover textarea {
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.4rem;
+  font-size: 0.82rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--fg);
+  outline: none;
+  font-family: inherit;
+}
+.comment-popover textarea:focus {
+  border-color: var(--accent);
+}
+.popover-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.4rem;
+}
+.popover-row input {
+  width: 6rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--fg);
+  outline: none;
+}
+.popover-row input:focus { border-color: var(--accent); }
+.popover-spacer { flex: 1; }
+
+/* Selection tooltip */
+.selection-tooltip {
+  display: none;
+  position: fixed;
+  z-index: 99;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 5px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  user-select: none;
+}
+.selection-tooltip.visible { display: block; }
+.selection-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--accent);
+}
+
+/* Responsive */
+@media (max-width: 64rem) {
+  .main { flex-direction: column; }
+  .pane-editor, .pane-preview { border-right: none; border-bottom: 1px solid var(--border); height: 35vh; }
+  .pane-sidebar { width: 100%; height: 30vh; }
+}
+
+/* Footnotes section in preview — hide it since we render sidebar */
+.preview-content .footnotes,
+.preview-content section[role="doc-endnotes"] {
+  display: none;
+}
+</style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <h1>mdcomments Editor</h1>
+  <span class="toolbar-hint">Select text in preview to add a comment</span>
+  <div class="toolbar-spacer"></div>
+  <label class="toolbar-hint" for="author-global">Author:</label>
+  <input id="author-global" type="text" value="you" style="width:5.5rem;padding:0.25rem 0.4rem;font-size:0.78rem;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--fg);outline:none;">
+  <button class="btn" onclick="loadSample()" title="Load sample document">Load Sample</button>
+</div>
+
+<!-- Main 3-pane layout -->
+<div class="main">
+  <!-- Editor pane -->
+  <div class="pane pane-editor">
+    <div class="pane-header"><span class="icon">📝</span> Markdown Source</div>
+    <div class="pane-body">
+      <textarea id="editor" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <!-- Preview pane -->
+  <div class="pane pane-preview">
+    <div class="pane-header"><span class="icon">👁</span> Preview</div>
+    <div class="pane-body">
+      <div id="preview" class="preview-content"></div>
+    </div>
+  </div>
+
+  <!-- Sidebar pane -->
+  <div class="pane pane-sidebar">
+    <div class="pane-header"><span class="icon">💬</span> Comments</div>
+    <div class="pane-body" id="sidebar"></div>
+  </div>
+</div>
+
+<!-- Selection tooltip (appears on text select in preview) -->
+<div class="selection-tooltip" id="selTooltip">💬 Comment</div>
+
+<!-- New-comment popover -->
+<div class="comment-popover" id="commentPopover">
+  <label>Selected text</label>
+  <div class="selected-text" id="popoverSelectedText"></div>
+  <label for="popoverComment">Comment</label>
+  <textarea id="popoverComment" placeholder="Write your comment…"></textarea>
+  <div class="popover-row">
+    <label for="popoverAuthor" style="margin:0;font-size:0.72rem;">@</label>
+    <input id="popoverAuthor" type="text" placeholder="author">
+    <div class="popover-spacer"></div>
+    <button class="btn" onclick="closePopover()">Cancel</button>
+    <button class="btn btn-primary" onclick="submitComment()">Add</button>
+  </div>
+</div>
+
+<script>
+// ─── State ──────────────────────────────────────────────────────────
+
+let activeThread = null;   // currently highlighted thread id
+
+const SAMPLE_MD = `# Quarterly Business Review — Q4 2025
+
+## Executive Summary
+
+The ==monthly revenue grew by 15%==[^c-rev1] last quarter, exceeding our
+initial projections. User retention improved across all cohorts[^c-ret1],
+and the product team shipped three major features on schedule.
+
+## Revenue Analysis
+
+Our subscription revenue reached $4.2M[^c-sub1], driven primarily by
+enterprise tier upgrades. The ==average contract value increased
+to $18,500==[^c-acv1], representing a 22% improvement over Q3.
+
+Ad revenue remained flat at $800K, which we attribute to seasonal
+trends and the ongoing shift toward subscription models.
+
+## User Metrics
+
+Monthly active users grew to 142,000[^c-mau1], with the strongest growth
+in the APAC region. The ==onboarding completion rate hit 78%==[^c-onb1],
+up from 61% in the previous quarter, following the redesign.
+
+Churn decreased to 3.1% monthly, the lowest in company history.
+
+## Outlook
+
+We expect Q1 2026 to continue the upward trend, with a planned
+launch of the Teams feature[^c-teams1] in late February.
+
+---
+
+[^c-rev1]:
+    anchor: "monthly revenue grew by 15%"
+
+    @alice (2026-02-10):
+    > Are we comparing this to the same quarter last year, or
+    > quarter-over-quarter?
+
+    @bob (2026-02-11):
+    > Year-over-year. Added a clarifying footnote to the
+    > appendix — see table A-3.
+
+    @alice (2026-02-11):
+    > 👍
+
+[^c-ret1]:
+    status: resolved
+
+    @carol (2026-02-12):
+    > Can we break this down by cohort in an appendix?
+
+    @bob (2026-02-12):
+    > Done — added Appendix B with per-cohort retention curves.
+
+    @carol (2026-02-12):
+    > Perfect, thanks!
+
+[^c-sub1]:
+    @dave (2026-02-13):
+    > Does this include the Acme Corp deal that closed late
+    > December? It was still pending in the CRM last I checked.
+
+[^c-acv1]:
+    anchor: "average contract value increased to $18,500"
+    status: resolved
+
+    @alice (2026-02-14):
+    > This is impressive. Should we highlight this in the
+    > board deck?
+
+    @eve (2026-02-14):
+    > Already added to slide 12.
+
+[^c-mau1]:
+    @frank (2026-02-15):
+    > How are we counting MAU — unique logins or any API call?
+
+    @bob (2026-02-15):
+    > Unique logins. The API-call metric is in the dashboard
+    > under "engagement."
+
+[^c-onb1]:
+    anchor: "onboarding completion rate hit 78%"
+
+    @carol (2026-02-15):
+    > This is a huge jump. What drove it — the new tutorial
+    > flow or the checklist widget?
+
+    @grace (2026-02-16):
+    > Mostly the checklist widget. A/B test showed a 14pp lift
+    > from that alone.
+
+[^c-teams1]:
+    @dave (2026-02-16):
+    > Are we confident about the February date? Engineering
+    > mentioned some blockers last week.
+
+    @eve (2026-02-17):
+    > We moved it to March 1. I'll update the doc.
+`;
+
+// ─── Markdown Parsing Helpers ──────────────────────────────────────
+
+/**
+ * Extract all footnote definition blocks from the source.
+ * Returns an array of { id, body, start, end } where start/end are
+ * character offsets in the original string.
+ *
+ * A footnote block starts with /^\[\^c-...\]:/ and continues while
+ * subsequent lines are blank or indented (4 spaces / 1 tab).
+ */
+function extractFootnoteBlocks(md) {
+  const blocks = [];
+  const lines = md.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const headerMatch = lines[i].match(/^\[\^(c-[^\]]+)\]:\s*(.*)$/);
+    if (headerMatch) {
+      const id = headerMatch[1];
+      const startLine = i;
+      i++;
+      // Consume continuation lines: indented (>=4 spaces) or blank
+      while (i < lines.length && (lines[i] === '' || /^\s{4}|\t/.test(lines[i]))) {
+        i++;
+      }
+      // Trim trailing blank lines from the body range
+      let endLine = i;
+      while (endLine > startLine + 1 && lines[endLine - 1] === '') endLine--;
+
+      const bodyLines = lines.slice(startLine + 1, endLine);
+      blocks.push({ id, body: bodyLines.join('\n'), startLine, endLine: i });
+    } else {
+      i++;
+    }
+  }
+  return blocks;
+}
+
+/**
+ * Parse mdcomments footnote definitions from the source.
+ * Returns a Map of id -> { anchor, status, entries: [{author, date, text}] }
+ */
+function parseCommentThreads(md) {
+  const threads = new Map();
+  const blocks = extractFootnoteBlocks(md);
+
+  for (const block of blocks) {
+    const thread = { id: block.id, anchor: null, status: 'open', entries: [] };
+
+    // Parse metadata lines (anchor:, status:)
+    const anchorMatch = block.body.match(/^\s*anchor:\s*"([^"]+)"/m);
+    if (anchorMatch) thread.anchor = anchorMatch[1];
+    const statusMatch = block.body.match(/^\s*status:\s*(\S+)/m);
+    if (statusMatch) thread.status = statusMatch[1];
+
+    // Split body into @author segments
+    const bodyLines = block.body.split('\n');
+    let currentEntry = null;
+    for (const line of bodyLines) {
+      const authorMatch = line.match(/^\s*@(\S+)\s+\(([^)]+)\):\s*$/);
+      if (authorMatch) {
+        if (currentEntry) thread.entries.push(currentEntry);
+        currentEntry = { author: authorMatch[1], date: authorMatch[2], text: '' };
+      } else if (currentEntry) {
+        // Continuation line — strip leading "    > " or "    "
+        const stripped = line.replace(/^\s{4}>\s?/, '').replace(/^\s{4}/, '');
+        currentEntry.text += (currentEntry.text ? '\n' : '') + stripped;
+      }
+    }
+    if (currentEntry) thread.entries.push(currentEntry);
+
+    // Trim whitespace from entry texts
+    for (const e of thread.entries) e.text = e.text.trim();
+
+    threads.set(block.id, thread);
+  }
+  return threads;
+}
+
+/**
+ * Strip footnote definition blocks from Markdown source so they
+ * don't appear in the rendered preview.
+ */
+function stripFootnoteBlocks(md) {
+  const lines = md.split('\n');
+  const blocks = extractFootnoteBlocks(md);
+  // Build set of line indices to remove
+  const remove = new Set();
+  for (const b of blocks) {
+    for (let i = b.startLine; i < b.endLine; i++) remove.add(i);
+  }
+  return lines.filter((_, i) => !remove.has(i)).join('\n');
+}
+
+/**
+ * Render Markdown to HTML, replacing ==text==[^c-xxx] with highlight+badge,
+ * and [^c-xxx] (point comments) with just a badge.
+ */
+function renderPreview(md) {
+  // Strip footnote definitions from content for rendering
+  let content = stripFootnoteBlocks(md);
+
+  // Replace ==highlighted text==[^c-xxx] with marker spans
+  content = content.replace(
+    /==([\s\S]*?)==\[\^(c-[^\]]+)\]/g,
+    (_, text, id) =>
+      `<span class="cm-highlight" data-thread="${id}">${text}</span>` +
+      `<a class="cm-badge" data-thread="${id}" href="#thread-${id}" title="View comment thread">💬</a>`
+  );
+
+  // Replace remaining [^c-xxx] (point comments, no highlight)
+  content = content.replace(
+    /\[\^(c-[^\]]+)\]/g,
+    (_, id) =>
+      `<a class="cm-badge" data-thread="${id}" href="#thread-${id}" title="View comment thread">💬</a>`
+  );
+
+  // Use marked.js for standard Markdown
+  return marked.parse(content);
+}
+
+// ─── Sidebar Rendering ─────────────────────────────────────────────
+
+function avatarInitial(author) {
+  return author.charAt(0).toUpperCase();
+}
+
+const AVATAR_COLORS = [
+  '#818cf8','#f472b6','#34d399','#fbbf24','#60a5fa',
+  '#a78bfa','#fb923c','#2dd4bf','#f87171','#a3e635',
+];
+
+function authorColor(author) {
+  let hash = 0;
+  for (let i = 0; i < author.length; i++) hash = (hash * 31 + author.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function renderSidebar(threads) {
+  const sidebar = document.getElementById('sidebar');
+  if (threads.size === 0) {
+    sidebar.innerHTML = `
+      <div class="no-threads">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">💬</div>
+        No comments yet.<br>
+        Select text in the preview and click<br>
+        <strong>💬 Comment</strong> to start a thread.
+      </div>`;
+    return;
+  }
+
+  let html = '';
+  for (const [id, thread] of threads) {
+    const isActive = id === activeThread;
+    html += `<div class="thread-card ${isActive ? 'active' : ''}" data-thread="${id}" id="thread-${id}" onclick="focusThread('${id}')">`;
+
+    if (thread.anchor) {
+      html += `<div class="thread-anchor">${escHtml(thread.anchor)}</div>`;
+    }
+
+    html += `<span class="thread-status thread-status-${thread.status}">${thread.status}</span>`;
+
+    for (const entry of thread.entries) {
+      html += `<div class="comment-entry">
+        <div class="comment-author-line">
+          <span class="comment-avatar" style="background:${authorColor(entry.author)}">${avatarInitial(entry.author)}</span>
+          <span class="comment-author">${escHtml(entry.author)}</span>
+          <span class="comment-date">${escHtml(entry.date)}</span>
+        </div>
+        <div class="comment-body">${escHtml(entry.text)}</div>
+      </div>`;
+    }
+
+    // Reply form
+    html += `<div class="reply-form">
+      <div class="reply-row">
+        <input class="reply-input" id="reply-${id}" placeholder="Reply…" onkeydown="if(event.key==='Enter'){addReply('${id}');event.preventDefault();}">
+        <button class="reply-btn" onclick="addReply('${id}')">↩</button>
+      </div>
+    </div>`;
+
+    html += `</div>`;
+  }
+  sidebar.innerHTML = html;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Core Update Loop ──────────────────────────────────────────────
+
+function update() {
+  const md = document.getElementById('editor').value;
+  const threads = parseCommentThreads(md);
+  document.getElementById('preview').innerHTML = renderPreview(md);
+  renderSidebar(threads);
+
+  // Bind highlight/badge clicks
+  document.querySelectorAll('.cm-highlight, .cm-badge').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      focusThread(el.dataset.thread);
+    });
+  });
+}
+
+function focusThread(id) {
+  activeThread = id;
+  // Highlight in preview
+  document.querySelectorAll('.cm-highlight, .cm-badge').forEach(el => {
+    el.classList.toggle('active', el.dataset.thread === id);
+  });
+  // Highlight in sidebar
+  document.querySelectorAll('.thread-card').forEach(el => {
+    el.classList.toggle('active', el.dataset.thread === id);
+  });
+  // Scroll sidebar card into view
+  const card = document.getElementById('thread-' + id);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ─── Adding Comments ───────────────────────────────────────────────
+
+let pendingSelection = null;
+
+const preview = document.getElementById('preview');
+const tooltip = document.getElementById('selTooltip');
+const popover = document.getElementById('commentPopover');
+
+// Show tooltip on text selection in preview
+document.addEventListener('mouseup', (e) => {
+  if (popover.classList.contains('visible')) return;
+
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) {
+    tooltip.classList.remove('visible');
+    return;
+  }
+
+  // Only handle selections within the preview pane
+  const range = sel.getRangeAt(0);
+  if (!preview.contains(range.commonAncestorContainer)) {
+    tooltip.classList.remove('visible');
+    return;
+  }
+
+  const text = sel.toString().trim();
+  if (!text) { tooltip.classList.remove('visible'); return; }
+
+  pendingSelection = { text, range };
+  const rect = range.getBoundingClientRect();
+  tooltip.style.left = (rect.left + rect.width / 2 - 40) + 'px';
+  tooltip.style.top = (rect.top - 36) + 'px';
+  tooltip.classList.add('visible');
+});
+
+tooltip.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  openPopover();
+});
+
+function openPopover() {
+  if (!pendingSelection) return;
+  tooltip.classList.remove('visible');
+
+  document.getElementById('popoverSelectedText').textContent = pendingSelection.text;
+  document.getElementById('popoverComment').value = '';
+  document.getElementById('popoverAuthor').value = document.getElementById('author-global').value || 'you';
+
+  // Position near the selection
+  const rect = pendingSelection.range.getBoundingClientRect();
+  let left = Math.min(rect.left, window.innerWidth - 300);
+  let top = rect.bottom + 8;
+  if (top + 220 > window.innerHeight) top = rect.top - 220;
+
+  popover.style.left = Math.max(8, left) + 'px';
+  popover.style.top = Math.max(8, top) + 'px';
+  popover.classList.add('visible');
+
+  setTimeout(() => document.getElementById('popoverComment').focus(), 50);
+}
+
+function closePopover() {
+  popover.classList.remove('visible');
+  pendingSelection = null;
+}
+
+function generateCommentId() {
+  // Generate a short id: c-XXXX
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let id = '';
+  for (let i = 0; i < 4; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return 'c-' + id;
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function submitComment() {
+  if (!pendingSelection) return;
+  const text = pendingSelection.text;
+  const comment = document.getElementById('popoverComment').value.trim();
+  const author = document.getElementById('popoverAuthor').value.trim() || 'anonymous';
+  if (!comment) { document.getElementById('popoverComment').focus(); return; }
+
+  const id = generateCommentId();
+  const date = todayISO();
+  const editor = document.getElementById('editor');
+  let md = editor.value;
+
+  // Wrap the selected text with ==text==[^c-id] in the source
+  // We need to find the raw text in the markdown and wrap it.
+  // The selected text comes from the rendered preview, so we search for it in the source.
+  const escapedText = escapeRegex(text);
+  // Try to find the text not already wrapped in == ==
+  const wrapRegex = new RegExp('(?<!=)(' + escapedText + ')(?!\\=\\=)');
+  const matchInSource = md.match(wrapRegex);
+  if (matchInSource) {
+    md = md.replace(wrapRegex, `==$1==[^${id}]`);
+  } else {
+    // Fallback: just add a point comment at the end of the first matching line
+    const lineRegex = new RegExp('(.*' + escapedText.split(/\s+/).slice(0, 3).join('\\s+') + '.*)');
+    const lineMatch = md.match(lineRegex);
+    if (lineMatch) {
+      md = md.replace(lineMatch[0], lineMatch[0] + `[^${id}]`);
+    }
+  }
+
+  // Build the footnote definition
+  const commentLines = comment.split('\n').map(l => `    > ${l}`).join('\n');
+  const fnDef = `\n[^${id}]:\n    anchor: "${text.replace(/"/g, '\\"').slice(0, 80)}"\n\n    @${author} (${date}):\n${commentLines}\n`;
+
+  // Find position to insert: before existing footnotes or at end
+  const fnPos = md.search(/\n\[\^c-/);
+  if (fnPos !== -1) {
+    md = md.slice(0, fnPos) + fnDef + md.slice(fnPos);
+  } else {
+    // Add separator and footnote at end
+    md = md.trimEnd() + '\n\n---\n' + fnDef;
+  }
+
+  editor.value = md;
+  closePopover();
+  update();
+  focusThread(id);
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ─── Replying to Threads ───────────────────────────────────────────
+
+function addReply(threadId) {
+  const input = document.getElementById('reply-' + threadId);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  const author = document.getElementById('author-global').value.trim() || 'you';
+  const date = todayISO();
+  const editor = document.getElementById('editor');
+  let md = editor.value;
+
+  // Find the footnote definition block for this thread
+  const blocks = extractFootnoteBlocks(md);
+  const block = blocks.find(b => b.id === threadId);
+  if (!block) return;
+
+  const replyLines = text.split('\n').map(l => `    > ${l}`).join('\n');
+  const replyBlock = `    @${author} (${date}):\n${replyLines}`;
+
+  // Insert reply at the end of this footnote block (before the line at endLine)
+  const lines = md.split('\n');
+  // Insert just before endLine (which is the first line after the block)
+  lines.splice(block.endLine, 0, '', replyBlock);
+  md = lines.join('\n');
+
+  editor.value = md;
+  update();
+  focusThread(threadId);
+
+  // Re-focus the reply input for continued conversation
+  setTimeout(() => {
+    const newInput = document.getElementById('reply-' + threadId);
+    if (newInput) newInput.focus();
+  }, 50);
+}
+
+// ─── Load Sample ───────────────────────────────────────────────────
+
+function loadSample() {
+  document.getElementById('editor').value = SAMPLE_MD;
+  update();
+}
+
+// ─── Init ──────────────────────────────────────────────────────────
+
+document.getElementById('editor').addEventListener('input', update);
+
+// Close popover when clicking outside
+document.addEventListener('mousedown', (e) => {
+  if (popover.classList.contains('visible') && !popover.contains(e.target) && e.target !== tooltip) {
+    closePopover();
+  }
+});
+
+// Start with sample
+loadSample();
+</script>
+</body>
+</html>

@@ -38,7 +38,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background: var(--bg);
       color: var(--fg);
-      line-height: 1.7;
+      line-height: 1.5;
     }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -46,86 +46,87 @@
     /* Hero */
     .hero {
       text-align: center;
-      padding: 5rem 1.5rem 3rem;
+      padding: 3rem 1.5rem 1.5rem;
       max-width: 720px;
       margin: 0 auto;
     }
     .hero h1 {
-      font-size: 2.8rem;
+      font-size: 2.4rem;
       font-weight: 800;
       letter-spacing: -0.03em;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4rem;
     }
     .hero h1 span { color: var(--accent); }
     .hero .tagline {
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       color: var(--muted);
-      margin-bottom: 2rem;
+      margin-bottom: 1rem;
     }
 
     /* Sections */
     section {
       max-width: 780px;
-      margin: 0 auto 3rem;
+      margin: 0 auto 1.75rem;
       padding: 0 1.5rem;
     }
     section h2 {
-      font-size: 1.6rem;
+      font-size: 1.4rem;
       font-weight: 700;
-      margin-bottom: 1rem;
-      padding-bottom: 0.4rem;
+      margin-bottom: 0.6rem;
+      padding-bottom: 0.3rem;
       border-bottom: 2px solid var(--border);
     }
     section p, section li {
       color: var(--fg);
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.5rem;
     }
 
     /* Feature grid */
     .features {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin: 1.5rem 0;
+      gap: 0.6rem;
+      margin: 0.75rem 0;
     }
     .feature-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
     }
     .feature-card strong {
-      display: block;
-      margin-bottom: 0.3rem;
+      display: inline;
+      margin-right: 0.3rem;
     }
     .feature-card p {
-      font-size: 0.92rem;
+      font-size: 0.88rem;
       color: var(--muted);
       margin: 0;
+      display: inline;
     }
 
     /* Code block */
     pre {
       background: var(--code-bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem;
+      border-radius: 6px;
+      padding: 1rem;
       overflow-x: auto;
-      font-size: 0.88rem;
-      line-height: 1.6;
-      margin: 1.25rem 0;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin: 0.75rem 0;
     }
     code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
 
     /* Comparison table */
-    .table-wrap { overflow-x: auto; margin: 1.25rem 0; }
+    .table-wrap { overflow-x: auto; margin: 0.75rem 0; }
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
     th, td {
-      padding: 0.6rem 0.75rem;
+      padding: 0.35rem 0.5rem;
       border: 1px solid var(--border);
       text-align: center;
     }
@@ -142,23 +143,23 @@
     /* Alternatives */
     .alt-list { list-style: none; padding: 0; }
     .alt-list li {
-      padding: 0.75rem 1rem;
+      padding: 0.4rem 0.75rem;
       border-left: 3px solid var(--border);
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.3rem;
       background: var(--card-bg);
-      border-radius: 0 6px 6px 0;
+      border-radius: 0 4px 4px 0;
     }
-    .alt-list li strong { display: block; margin-bottom: 0.2rem; }
-    .alt-list li span { font-size: 0.9rem; color: var(--muted); }
+    .alt-list li strong { display: inline; margin-right: 0.25rem; font-size: 0.9rem; }
+    .alt-list li span { font-size: 0.85rem; color: var(--muted); }
 
     /* Footer */
     footer {
       text-align: center;
-      padding: 2rem 1rem;
+      padding: 1.25rem 1rem;
       color: var(--muted);
       font-size: 0.85rem;
       border-top: 1px solid var(--border);
-      margin-top: 2rem;
+      margin-top: 1rem;
     }
   </style>
 </head>
@@ -168,13 +169,7 @@
   <header class="hero">
     <h1><span>md</span>comments</h1>
     <p class="tagline">
-      Native comments for Markdown — structured, portable, and built from existing syntax.
-    </p>
-    <p>
-      A lightweight comment format that supports <strong>anchoring</strong>,
-      <strong>authorship</strong>, <strong>timestamps</strong>,
-      <strong>threading</strong>, and <strong>metadata</strong> — using only
-      standard footnotes, blockquotes, and @-mentions.
+      Structured, portable comments for Markdown — anchoring, authorship, threading, and metadata using only standard footnotes, blockquotes, and @-mentions.
     </p>
   </header>
 
@@ -182,15 +177,7 @@
   <section>
     <h2>Why mdcomments?</h2>
     <p>
-      Markdown is rapidly becoming the universal format for LLM-generated and
-      LLM-consumed content. Yet there is no portable way to annotate it with
-      structured comments. Existing solutions are either unstructured
-      (HTML&nbsp;comments, <code>%%</code>, CriticMarkup, kramdown) or platform-locked (HackMD, Notion,
-      sidecar&nbsp;JSON).
-    </p>
-    <p>
-      Comments should live <em>in</em> the file and survive round-tripping
-      through any tool.
+      Markdown is the universal format for LLM-generated and LLM-consumed content, yet there is no portable way to annotate it with structured comments. Existing solutions are either unstructured (HTML&nbsp;comments, <code>%%</code>, CriticMarkup) or platform-locked (HackMD, Notion). Comments should live <em>in</em> the file and survive round-tripping through any tool.
     </p>
   </section>
 
@@ -229,9 +216,7 @@
   <section>
     <h2>How It Works</h2>
     <p>
-      Inline <code>[^c-id]</code> footnote markers anchor comments to specific text.
-      Comment threads are defined at the bottom of the document using standard
-      footnote syntax, with <code>@author (date):</code> lines and blockquoted messages:
+      Inline <code>[^c-id]</code> markers anchor comments to text. Threads are defined at the bottom using footnote syntax with <code>@author (date):</code> and blockquoted messages:
     </p>
     <pre><code>The ==monthly revenue grew by 15%==[^c-rev1] last quarter.
 
@@ -242,19 +227,9 @@
     @bob (2026-02-11):
     &gt; Yes. Added a clarifying note.</code></pre>
     <p>
-      To anchor a comment to a <strong>range of text</strong>, wrap it in
-      <code>==...==</code> (mark/highlight syntax) with the ref attached.
-      For parsers that don't support <code>==</code>, an <code>anchor:</code>
-      metadata line in the thread definition serves as a fallback.
-    </p>
-    <p>
-      For large documents, thread definitions can live in a companion
-      <code>document.comments.md</code> file — still plain Markdown, still
-      human-readable.
-    </p>
-    <p>
-      In any standard Markdown renderer, comments degrade gracefully to ordinary
-      footnotes — nothing breaks, nothing is lost.
+      Wrap text in <code>==...==</code> for range anchoring; an <code>anchor:</code> metadata line provides a fallback for parsers without highlight syntax.
+      For large documents, threads can live in a companion <code>document.comments.md</code> file.
+      In any standard renderer, comments degrade gracefully to ordinary footnotes.
     </p>
   </section>
 
@@ -262,11 +237,11 @@
   <section>
     <h2>Why Footnotes?</h2>
     <ol>
-      <li><strong>Already standardized</strong> — supported by GitHub Flavored Markdown, Pandoc, Hugo, Obsidian, and most CommonMark extensions.</li>
-      <li><strong>Graceful degradation</strong> — in renderers that support footnotes, comments appear as numbered references. In those that don't, the raw <code>[^c-id]</code> is small and unintrusive.</li>
-      <li><strong>Natural separation of concerns</strong> — a tiny inline marker with a longer definition elsewhere keeps prose clean.</li>
-      <li><strong>No new syntax</strong> — combines three existing primitives: footnotes, blockquotes, and @-mentions.</li>
-      <li><strong>Convention over specification</strong> — the <code>c-</code> prefix and <code>@author (date):</code> pattern are conventions layered on valid Markdown.</li>
+      <li><strong>Already standardized</strong> — supported by GFM, Pandoc, Hugo, Obsidian, and most CommonMark extensions.</li>
+      <li><strong>Graceful degradation</strong> — comments appear as numbered references; raw <code>[^c-id]</code> is unintrusive where unsupported.</li>
+      <li><strong>Separation of concerns</strong> — tiny inline marker, longer definition elsewhere keeps prose clean.</li>
+      <li><strong>No new syntax</strong> — combines footnotes, blockquotes, and @-mentions.</li>
+      <li><strong>Convention over specification</strong> — <code>c-</code> prefix and <code>@author (date):</code> are conventions on valid Markdown.</li>
     </ol>
   </section>
 
@@ -274,46 +249,16 @@
   <section>
     <h2>Alternatives Considered</h2>
     <ul class="alt-list">
-      <li>
-        <strong>HTML Comments <code>&lt;!-- --&gt;</code></strong>
-        <span>Universal support, but no anchoring, author, or threading. Too primitive for collaborative review.</span>
-      </li>
-      <li>
-        <strong>Reference-Link Hack</strong>
-        <span>Works in most parsers but has no structure at all. A clever trick, not a foundation.</span>
-      </li>
-      <li>
-        <strong>Obsidian <code>%%</code></strong>
-        <span>Simple syntax, but non-standard and Obsidian-only. Locks you into one tool.</span>
-      </li>
-      <li>
-        <strong>CriticMarkup</strong>
-        <span>Closest prior art — inline and anchored — but lacks threading and <code>{}</code> collides with attribute syntax.</span>
-      </li>
-      <li>
-        <strong>kramdown <code>{::comment}</code></strong>
-        <span>Explicitly a comment directive, but kramdown-only. No anchoring or structure.</span>
-      </li>
-      <li>
-        <strong>MDX / JSX Comments</strong>
-        <span>Native to React/JSX ecosystem only. Not portable Markdown.</span>
-      </li>
-      <li>
-        <strong>Pandoc Footnotes</strong>
-        <span>Reference-style and inline forms. Concise but render visibly and lack identity or threading.</span>
-      </li>
-      <li>
-        <strong>Marker / PyMdown Highlight Syntax</strong>
-        <span>Visual anchoring via <code>{== ==}</code>, but same structural shortcomings as CriticMarkup.</span>
-      </li>
-      <li>
-        <strong>Sidecar JSON Files</strong>
-        <span>Keeps Markdown pristine but comments are lost if the sidecar is missing. Fragile and non-portable.</span>
-      </li>
-      <li>
-        <strong>Platform Databases (HackMD, Notion)</strong>
-        <span>Great UX, zero portability. Comments vanish when you export or leave the platform.</span>
-      </li>
+      <li><strong>HTML <code>&lt;!-- --&gt;</code></strong> <span>Universal but no anchoring, author, or threading.</span></li>
+      <li><strong>Ref-link hack</strong> <span>No structure. A clever trick, not a foundation.</span></li>
+      <li><strong>Obsidian <code>%%</code></strong> <span>Non-standard, Obsidian-only.</span></li>
+      <li><strong>CriticMarkup</strong> <span>Inline and anchored but lacks threading; <code>{}</code> collides with attributes.</span></li>
+      <li><strong>kramdown <code>{::comment}</code></strong> <span>kramdown-only. No anchoring or structure.</span></li>
+      <li><strong>MDX / JSX</strong> <span>React/JSX ecosystem only. Not portable Markdown.</span></li>
+      <li><strong>Pandoc footnotes</strong> <span>Render visibly, lack identity or threading.</span></li>
+      <li><strong>Marker / PyMdown</strong> <span>Visual anchoring but same structural shortcomings as CriticMarkup.</span></li>
+      <li><strong>Sidecar JSON</strong> <span>Comments lost if sidecar is missing. Fragile and non-portable.</span></li>
+      <li><strong>Platform DBs</strong> <span>Great UX, zero portability. Comments vanish on export.</span></li>
     </ul>
   </section>
 
@@ -441,13 +386,10 @@
   <!-- Links -->
   <section>
     <h2>Learn More</h2>
-    <p>
-      Read the full specification and details on GitHub:
-    </p>
     <ul>
-      <li><a href="https://github.com/petrroll/mdcomments/blob/main/about.md">About mdcomments</a></li>
-      <li><a href="https://github.com/petrroll/mdcomments/blob/main/rationale.md">Design Rationale</a></li>
-      <li><a href="examples/results.html">Cross-Parser Examples</a> — see how mdcomments renders across five Markdown systems</li>
+      <li><a href="https://github.com/petrroll/mdcomments/blob/main/about.md">About</a> · <a href="https://github.com/petrroll/mdcomments/blob/main/rationale.md">Design Rationale</a></li>
+      <li><a href="examples/results.html">Cross-Parser Examples</a> — rendering across five Markdown systems</li>
+      <li><a href="examples/interactive-editor/index.html">Interactive Editor</a> — try threaded comments in a live editor</li>
     </ul>
   </section>
 

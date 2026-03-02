@@ -13,6 +13,20 @@ Side-by-side comparison of how the [mdcomments](https://github.com/petrroll/mdco
 | **MkDocs** | Python | via `footnotes` ext | via `pymdownx.mark` | Python-Markdown Treeprocessor |
 | **Showdown** | Node.js | Built-in (limited) | ✗ | Regex preprocessor extension |
 | **Comrak** | Rust | via `--extension footnotes` | ✗ | AST walk + custom renderer |
+| **Interactive Editor** | Browser (JS) | Client-side | Client-side | WYSIWYG editor with live preview |
+
+## Interactive Editor
+
+A standalone HTML page that lets you **write Markdown and create threaded
+comments** interactively. Select text in the rendered preview, click 💬, and the
+editor inserts the proper `==text==[^c-id]` syntax and footnote definition into
+the source — all in real time.
+
+```bash
+open examples/interactive-editor/index.html
+```
+
+See [`interactive-editor/README.md`](interactive-editor/README.md) for details.
 
 ## Quick Start
 
@@ -79,6 +93,9 @@ examples/
     ├── Cargo.toml
     ├── src/main.rs             # Rust binary (default + plugin modes)
     └── build.sh
+├── interactive-editor/
+│   ├── index.html              # Self-contained WYSIWYG editor
+│   └── README.md
 ```
 
 ## Outputs
