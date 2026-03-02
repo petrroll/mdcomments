@@ -140,17 +140,43 @@
     .n { color: var(--red); }
     .w { color: var(--yellow); }
 
-    /* Alternatives */
-    .alt-list { list-style: none; padding: 0; }
-    .alt-list li {
-      padding: 0.4rem 0.75rem;
-      border-left: 3px solid var(--border);
-      margin-bottom: 0.3rem;
-      background: var(--card-bg);
-      border-radius: 0 4px 4px 0;
+    /* Notes column */
+    td:last-child { font-size: 0.82rem; color: var(--muted); max-width: 18rem; }
+
+    /* Learn More cards */
+    .learn-more-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+      gap: 1rem;
+      padding: 0;
+      list-style: none;
     }
-    .alt-list li strong { display: inline; margin-right: 0.25rem; font-size: 0.9rem; }
-    .alt-list li span { font-size: 0.85rem; color: var(--muted); }
+    .learn-more-cards li {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.1rem 1.25rem;
+      transition: border-color 0.15s;
+    }
+    .learn-more-cards li:hover {
+      border-color: var(--accent);
+    }
+    .learn-more-cards a {
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      color: var(--accent);
+    }
+    .learn-more-cards a:hover {
+      text-decoration: underline;
+    }
+    .learn-more-cards .desc {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
 
     /* Footer */
     footer {
@@ -245,26 +271,9 @@
     </ol>
   </section>
 
-  <!-- Alternatives -->
-  <section>
-    <h2>Alternatives Considered</h2>
-    <ul class="alt-list">
-      <li><strong>HTML <code>&lt;!-- --&gt;</code></strong> <span>Universal but no anchoring, author, or threading.</span></li>
-      <li><strong>Ref-link hack</strong> <span>No structure. A clever trick, not a foundation.</span></li>
-      <li><strong>Obsidian <code>%%</code></strong> <span>Non-standard, Obsidian-only.</span></li>
-      <li><strong>CriticMarkup</strong> <span>Inline and anchored but lacks threading; <code>{}</code> collides with attributes.</span></li>
-      <li><strong>kramdown <code>{::comment}</code></strong> <span>kramdown-only. No anchoring or structure.</span></li>
-      <li><strong>MDX / JSX</strong> <span>React/JSX ecosystem only. Not portable Markdown.</span></li>
-      <li><strong>Pandoc footnotes</strong> <span>Render visibly, lack identity or threading.</span></li>
-      <li><strong>Marker / PyMdown</strong> <span>Visual anchoring but same structural shortcomings as CriticMarkup.</span></li>
-      <li><strong>Sidecar JSON</strong> <span>Comments lost if sidecar is missing. Fragile and non-portable.</span></li>
-      <li><strong>Platform DBs</strong> <span>Great UX, zero portability. Comments vanish on export.</span></li>
-    </ul>
-  </section>
-
   <!-- Comparison table -->
   <section>
-    <h2>Comparison</h2>
+    <h2>Comparison with Alternatives</h2>
     <div class="table-wrap">
       <table>
         <thead>
@@ -276,6 +285,7 @@
             <th>Hidden / Graceful</th>
             <th>Portable</th>
             <th>Survives Export</th>
+            <th>Notes</th>
           </tr>
         </thead>
         <tbody>
@@ -287,6 +297,7 @@
             <td class="y">✓ Hidden</td>
             <td class="y">✓</td>
             <td class="y">✓</td>
+            <td>Universal but no anchoring, author, or threading.</td>
           </tr>
           <tr>
             <td>Ref-link hack</td>
@@ -296,6 +307,7 @@
             <td class="y">✓ Hidden</td>
             <td class="y">✓</td>
             <td class="y">✓</td>
+            <td>No structure. A clever trick, not a foundation.</td>
           </tr>
           <tr>
             <td>Obsidian <code>%%</code></td>
@@ -305,6 +317,7 @@
             <td class="y">✓ Hidden</td>
             <td class="n">✗</td>
             <td class="y">✓</td>
+            <td>Non-standard, Obsidian-only.</td>
           </tr>
           <tr>
             <td>CriticMarkup</td>
@@ -314,6 +327,7 @@
             <td class="n">✗ Visible</td>
             <td class="w">⚠ Pandoc</td>
             <td class="y">✓</td>
+            <td>Inline and anchored but lacks threading; <code>{}</code> collides with attributes.</td>
           </tr>
           <tr>
             <td>kramdown <code>{::}</code></td>
@@ -323,6 +337,7 @@
             <td class="y">✓ Hidden</td>
             <td class="n">✗</td>
             <td class="y">✓</td>
+            <td>kramdown-only. No anchoring or structure.</td>
           </tr>
           <tr>
             <td>MDX <code>{/* */}</code></td>
@@ -332,6 +347,7 @@
             <td class="y">✓ Hidden</td>
             <td class="n">✗</td>
             <td class="y">✓</td>
+            <td>React/JSX ecosystem only. Not portable Markdown.</td>
           </tr>
           <tr>
             <td>Pandoc <code>^[]</code></td>
@@ -341,6 +357,7 @@
             <td class="n">✗ Visible</td>
             <td class="w">⚠ Pandoc</td>
             <td class="y">✓</td>
+            <td>Render visibly, lack identity or threading.</td>
           </tr>
           <tr>
             <td>Marker/PyMdown</td>
@@ -350,6 +367,7 @@
             <td class="n">✗ Visible</td>
             <td class="w">⚠ Limited</td>
             <td class="y">✓</td>
+            <td>Visual anchoring but same structural shortcomings as CriticMarkup.</td>
           </tr>
           <tr>
             <td>Sidecar JSON</td>
@@ -359,6 +377,7 @@
             <td class="y">✓ Hidden</td>
             <td class="n">✗</td>
             <td class="w">⚠</td>
+            <td>Comments lost if sidecar is missing. Fragile and non-portable.</td>
           </tr>
           <tr>
             <td>Platform DB</td>
@@ -368,6 +387,7 @@
             <td class="y">✓ Hidden</td>
             <td class="n">✗</td>
             <td class="n">✗ Lost</td>
+            <td>Great UX, zero portability. Comments vanish on export.</td>
           </tr>
           <tr>
             <td><strong>mdcomments</strong></td>
@@ -377,6 +397,7 @@
             <td class="y"><strong>✓ Graceful</strong></td>
             <td class="y"><strong>✓</strong></td>
             <td class="y"><strong>✓</strong></td>
+            <td><strong>Structured, portable, graceful degradation.</strong></td>
           </tr>
         </tbody>
       </table>
@@ -386,10 +407,23 @@
   <!-- Links -->
   <section>
     <h2>Learn More</h2>
-    <ul>
-      <li><a href="https://github.com/petrroll/mdcomments/blob/main/about.md">About</a> · <a href="https://github.com/petrroll/mdcomments/blob/main/rationale.md">Design Rationale</a></li>
-      <li><a href="examples/results.html">Cross-Parser Examples</a> — rendering across five Markdown systems</li>
-      <li><a href="examples/interactive-editor/index.html">Interactive Editor</a> — try threaded comments in a live editor</li>
+    <ul class="learn-more-cards">
+      <li>
+        <a href="https://github.com/petrroll/mdcomments/blob/main/overview.md">About</a>
+        <span class="desc">What mdcomments is, how it works, and the conventions it follows.</span>
+      </li>
+      <li>
+        <a href="https://github.com/petrroll/mdcomments/blob/main/rationale.md">Design Rationale</a>
+        <span class="desc">Why footnotes? A deep dive into the design decisions and trade-offs.</span>
+      </li>
+      <li>
+        <a href="examples/results.html">Cross-Parser Examples</a>
+        <span class="desc">See how mdcomments renders across five different Markdown systems.</span>
+      </li>
+      <li>
+        <a href="examples/interactive-editor/index.html">Interactive Editor</a>
+        <span class="desc">Try threaded comments in a live editor — no setup required.</span>
+      </li>
     </ul>
   </section>
 
