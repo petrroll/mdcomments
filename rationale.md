@@ -150,6 +150,27 @@ Overlaps with CriticMarkup; uses `{== ==}` for highlighting.
 
 **Verdict:** Niche. Same structural shortcomings as CriticMarkup.
 
+### Ad-Hoc Styled Blockquotes
+
+```markdown
+> **@Petr** *2025-02-03* The `CH-*` headers are placeholders pending
+> Max's plans for a better client telemetry system.
+>
+>> **@Max** *2025-02-05* Acknowledged — will share the new schema by
+>> end of sprint.
+```
+
+A convention (not a spec) sometimes seen in PR descriptions, design docs, and RFCs: bold `**@name**`, italic `*date*`, then the comment text, threaded via nested `>>`.
+
+| ✅ Strengths | ❌ Weaknesses |
+|---|---|
+| Pure standard Markdown — every parser | No anchoring to specific text |
+| Threading via nested blockquotes | Multiple threads at the same location are hard to distinguish |
+| Author + date by convention | Structure is informal / unenforced |
+| | Visible in output (not hidden or graceful) |
+
+**Verdict:** Close in spirit to mdcomments — threaded and attributed — but lacks anchoring and a formal grammar. mdcomments adds anchoring (`[^c-id]`), a namespace, and a normative spec while keeping the same Markdown-native philosophy.
+
 ### Sidecar Files (JSON alongside `.md`)
 
 ```
@@ -192,6 +213,7 @@ Full Google Docs–style comment UIs, but comments live in the platform's databa
 | MDX `{/* */}` | ❌ | ❌ | ❌ | ✅ Hidden | ❌ | ✅ | Low |
 | Pandoc `^[]` | ✅ | ❌ | ❌ | ❌ Visible | ⚠️ Pandoc | ✅ | Low |
 | Marker/PyMdown | ✅ | ❌ | ❌ | ❌ Visible | ⚠️ Limited | ✅ | Medium |
+| Styled Blockquotes | ❌ | ✅* | ⚠️* | ❌ Visible | ✅ | ✅ | Medium |
 | Sidecar JSON | ✅ | ❌ | ❌ | ✅ Hidden | ❌ | ⚠️ | None |
 | Platform DB | ✅ | ✅ | ✅ | ✅ Hidden | ❌ | ❌ Lost | None |
 | **mdcomments** | **✅** | **✅** | **✅** | **✅ Graceful** | **✅** | **✅** | **Minimal** |

@@ -129,11 +129,36 @@ Overlaps with CriticMarkup; uses `{== ==}` for highlighting.
 - ❌ Same limitations as CriticMarkup — no threads, no identity
 - Used by: **Marker, PyMdown Extensions**
 
+### 9. Ad-Hoc Styled Blockquotes
+
+Using standard blockquotes with bold author names and italic dates — a
+convention sometimes used in PR descriptions, design docs, and RFCs.
+
+```markdown
+> **@Petr** *2025-02-03* The `CH-*` headers are placeholders pending
+> Max's plans for a better client telemetry system. Format, naming, and
+> allowed values for `CH-UA`, `CH-CV`, `CH-AV`, and `CH-PL` may change
+> based on that design.
+>
+>> **@Max** *2025-02-05* Acknowledged — will share the new schema by
+>> end of sprint.
+```
+
+- ✅ Pure standard Markdown — works in every parser
+- ✅ Threading via nested blockquotes (`>>`)
+- ✅ Author and date by convention (bold name, italic date)
+- ❌ No anchoring — comments float in the document, can't attach to specific text
+- ❌ Multiple threads at the same location are hard to distinguish — no thread ID or boundary marker
+- ❌ Structure is informal / unenforced — easy to drift across authors
+- ❌ Visible in rendered output (not hidden or graceful)
+- Note: mdcomments is not far from this pattern but adds anchoring, a
+  namespace (`c-`), and a formal grammar
+
 ---
 
 ## Obsidian Plugins (Analyzed in Detail)
 
-### 9. JasperSurmont/obsidian-comments — Callout Syntax
+### 10. JasperSurmont/obsidian-comments — Callout Syntax
 
 Repurposes Obsidian's callout (blockquote) syntax. Comments live inline in the
 document body.
@@ -156,7 +181,7 @@ document body.
 | Portability  | ❌ Obsidian only (`[!comment]` callout type)    |
 | Prose impact | ❌ Large blockquote blocks interrupt the prose  |
 
-### 10. HQuaiato/obsidian-comment-plugin — Inline HTML
+### 11. HQuaiato/obsidian-comment-plugin — Inline HTML
 
 Wraps selected text in raw HTML `<span>` tags with `data-comment` attributes.
 
@@ -176,7 +201,7 @@ style="border-bottom: 1px dotted; cursor: pointer;">revenue grew by
 | Portability  | ⚠️ HTML renders, but comment content is hidden  |
 | Prose impact | ❌ Verbose HTML tags clutter the source         |
 
-### 11. ChobbyCode/Obsidian-Comments — Sidecar JSON
+### 12. ChobbyCode/Obsidian-Comments — Sidecar JSON
 
 Stores comments in a separate JSON file alongside the Markdown. The `.md` file
 is never touched.
@@ -249,12 +274,14 @@ the platform's database and **stripped from Markdown exports**.
 | MDX `{/* */}`        | ❌       | ❌     | ❌        | ✅     | ❌ MDX only       | ✅              |
 | Pandoc `^[]`         | ✅       | ❌     | ❌        | ❌     | ⚠️ Pandoc         | ✅              |
 | Marker/PyMdown       | ✅       | ❌     | ❌        | ❌     | ⚠️ Limited        | ✅              |
+| Styled Blockquotes   | ❌       | ✅*    | ⚠️*       | ❌     | ✅ Universal      | ✅              |
 | JasperSurmont        | ~line    | ✅     | ✅        | ✅     | ❌ Obsidian       | ✅              |
 | HQuaiato             | ✅       | ❌     | ❌        | ⚠️     | ⚠️ HTML parsers   | ✅              |
 | ChobbyCode           | ✅       | ❌     | ❌        | ✅     | ❌ Plugin only    | ⚠️ (sidecar)    |
 | HackMD/GitBook/...   | ✅       | ✅     | ✅        | ✅     | ❌ Platform       | ❌ **Lost**     |
 
-\* CriticMarkup: author by informal convention only
+\* CriticMarkup: author by informal convention only \
+\* Styled Blockquotes: author/date by informal convention; threading works but multiple threads at the same location are hard to tell apart
 
 ---
 
