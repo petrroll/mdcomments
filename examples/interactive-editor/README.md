@@ -1,5 +1,7 @@
 # mdcomments — Interactive Editor
 
+> **Note:** This is a **UX/DX demonstration** and is not production-ready. It may break or behave unexpectedly. Use it to explore the mdcomments workflow, not in a production environment.
+
 A self-contained HTML page that provides a live Markdown editor with support for
 creating and replying to threaded comments using the
 [mdcomments](https://github.com/petrroll/mdcomments) syntax.

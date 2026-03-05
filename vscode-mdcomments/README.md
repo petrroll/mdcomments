@@ -1,5 +1,7 @@
 # vscode-mdcomments
 
+> **Note:** This extension is a **UX/DX demonstration** and is not production-ready. It may break or behave unexpectedly. Use it to explore the mdcomments workflow, not in a production environment.
+
 A VS Code extension for mdcomments with a dedicated **interactive preview** panel,
 letting you **view**, **add**, and **reply to** comments directly in `.md` files.
 
