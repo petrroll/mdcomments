@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as crypto from 'crypto';
 import MarkdownIt from 'markdown-it';
 
 type ThreadEntry = { author: string; date: string; bodyLines: string[] };
@@ -93,6 +94,42 @@ function threadStatus(threads: ThreadMap, id: string): string {
   return (threads[id]?.meta?.status || 'open').toLowerCase();
 }
 
+/** Formats a single comment/reply entry block (indented, ready to embed in a footnote). */
+function buildCommentEntry(author: string, commentText: string): string {
+  const date = todayISO();
+  const bodyLines = commentText.split('\n').map((line) => `    > ${line}`).join('\n');
+  return `    @${author} (${date}):\n${bodyLines}`;
+}
+
+function buildThreadBlock(threadId: string, author: string, commentText: string): string {
+  return `\n[^${threadId}]:\n${buildCommentEntry(author, commentText)}\n`;
+}
+
+function buildReplyBlock(author: string, commentText: string): string {
+  return `\n${buildCommentEntry(author, commentText)}\n`;
+}
+
+type AnchorEditPlan =
+  | { kind: 'insertMarker'; offset: number }
+  | { kind: 'replaceSelection'; startOffset: number; endOffset: number; replacement: string };
+
+function planAnchorEdit(fullText: string, startOffset: number, endOffset: number, anchorText: string, threadId: string): AnchorEditPlan {
+  const beforeSel = fullText.substring(Math.max(0, startOffset - 2), startOffset);
+  const afterSel = fullText.substring(endOffset, Math.min(fullText.length, endOffset + 2));
+  const alreadyHighlighted = beforeSel === '==' && afterSel === '==';
+
+  if (alreadyHighlighted) {
+    return { kind: 'insertMarker', offset: endOffset + 2 };
+  }
+
+  return {
+    kind: 'replaceSelection',
+    startOffset,
+    endOffset,
+    replacement: `==${anchorText}==[^${threadId}]`
+  };
+}
+
 function getUnifiedCommentPlacement(cfg: vscode.WorkspaceConfiguration): 'sidebar' | 'nearAnchor' {
   const unified = cfg.get<'sidebar' | 'nearAnchor'>('commentPlacement');
   if (unified === 'sidebar' || unified === 'nearAnchor') {
@@ -109,6 +146,14 @@ function getUnifiedCommentPlacement(cfg: vscode.WorkspaceConfiguration): 'sideba
   return 'sidebar';
 }
 
+function isBlankLine(line: string): boolean {
+  return /^\s*$/.test(line);
+}
+
+function isThreadContinuationLine(line: string): boolean {
+  return isBlankLine(line) || /^(\s{4}|\t)/.test(line);
+}
+
 function findThreadBlock(text: string, threadId: string): { start: number; end: number } | null {
   const lines = text.split('\n');
   const header = `[^${threadId}]:`;
@@ -123,7 +168,7 @@ function findThreadBlock(text: string, threadId: string): { start: number; end: 
   if (startLine < 0) return null;
 
   let endLine = startLine + 1;
-  while (endLine < lines.length && (lines[endLine] === '' || /^(\s{4}|\t)/.test(lines[endLine]))) {
+  while (endLine < lines.length && isThreadContinuationLine(lines[endLine])) {
     endLine++;
   }
   while (endLine > startLine + 1 && lines[endLine - 1].trim() === '') {
@@ -183,13 +228,18 @@ function parseThreadsFromSource(src: string): { threads: ThreadMap; strippedSour
   let i = 0;
 
   while (i < lines.length) {
-    const fenceMatch = lines[i].match(/^\s*(```+|~~~+)/);
+    const fenceMatch = lines[i].match(/^\s*(```+|~~~+)(.*)?$/);
     if (fenceMatch) {
-      const marker = fenceMatch[1][0];
+      const marker = fenceMatch[1];
+      const trailingContent = (fenceMatch[2] || '').trim();
       if (!inFence) {
         inFence = true;
         fenceMarker = marker;
-      } else if (fenceMarker === marker) {
+      } else if (
+        fenceMarker[0] === marker[0] &&
+        marker.length >= fenceMarker.length &&
+        !trailingContent
+      ) {
         inFence = false;
         fenceMarker = '';
       }
@@ -208,7 +258,7 @@ function parseThreadsFromSource(src: string): { threads: ThreadMap; strippedSour
     removeLines.add(i);
     i++;
 
-    while (i < lines.length && (lines[i] === '' || /^(\s{4}|\t)/.test(lines[i]))) {
+    while (i < lines.length && isThreadContinuationLine(lines[i])) {
       removeLines.add(i);
       i++;
     }
@@ -291,7 +341,6 @@ class EditorCommentDecorations implements vscode.Disposable {
 
     this.disposables.push(
       vscode.window.onDidChangeVisibleTextEditors(() => this.refreshVisibleEditors()),
-      vscode.window.onDidChangeActiveTextEditor(() => this.refreshVisibleEditors()),
       vscode.workspace.onDidChangeTextDocument((event) => this.refreshDocumentEditors(event.document.uri)),
       vscode.workspace.onDidOpenTextDocument((doc) => this.refreshDocumentEditors(doc.uri)),
       vscode.workspace.onDidCloseTextDocument((doc) => this.refreshDocumentEditors(doc.uri)),
@@ -446,28 +495,26 @@ async function addCommentInEditor(editor: vscode.TextEditor): Promise<boolean> {
     prompt: 'Comment text',
     placeHolder: 'Write your comment…'
   });
-  if (!commentText) return false;
+  if (!commentText || !commentText.trim()) return false;
 
   const doc = editor.document;
   const fullText = doc.getText();
   const id = nextCommentId(fullText);
   const selectedText = doc.getText(selection);
-  const date = todayISO();
-  const bodyLines = commentText.split('\n').map((line) => `    > ${line}`).join('\n');
 
-  let threadBlock = `\n[^${id}]:\n`;
-  const beforeSel = fullText.substring(Math.max(0, doc.offsetAt(selection.start) - 2), doc.offsetAt(selection.start));
-  const afterSel = fullText.substring(doc.offsetAt(selection.end), Math.min(fullText.length, doc.offsetAt(selection.end) + 2));
-  const alreadyHighlighted = beforeSel === '==' && afterSel === '==';
-
-  threadBlock += `    @${author} (${date}):\n${bodyLines}\n`;
+  const threadBlock = buildThreadBlock(id, author, commentText);
+  const startOffset = doc.offsetAt(selection.start);
+  const endOffset = doc.offsetAt(selection.end);
+  const anchorEdit = planAnchorEdit(fullText, startOffset, endOffset, selectedText, id);
 
   const ok = await editor.edit((editBuilder) => {
-    if (alreadyHighlighted) {
-      const afterHighlight = new vscode.Position(selection.end.line, selection.end.character + 2);
-      editBuilder.insert(afterHighlight, `[^${id}]`);
+    if (anchorEdit.kind === 'insertMarker') {
+      editBuilder.insert(doc.positionAt(anchorEdit.offset), `[^${id}]`);
     } else {
-      editBuilder.replace(selection, `==${selectedText}==[^${id}]`);
+      editBuilder.replace(
+        new vscode.Range(doc.positionAt(anchorEdit.startOffset), doc.positionAt(anchorEdit.endOffset)),
+        anchorEdit.replacement
+      );
     }
 
     const endPos = doc.lineAt(doc.lineCount - 1).range.end;
@@ -521,23 +568,18 @@ async function addCommentFromPreviewSelection(
   const targetOffset = typeof bestOffset === 'number' ? bestOffset : offsets[fallbackIndex];
 
   const id = nextCommentId(fullText);
-  const date = todayISO();
-  const bodyLines = commentText.split('\n').map((line) => `    > ${line}`).join('\n');
-  let threadBlock = `\n[^${id}]:\n`;
-  threadBlock += `    @${safeAuthor} (${date}):\n${bodyLines}\n`;
-
-  const beforeSel = fullText.substring(Math.max(0, targetOffset - 2), targetOffset);
-  const afterSel = fullText.substring(targetOffset + anchor.length, Math.min(fullText.length, targetOffset + anchor.length + 2));
-  const alreadyHighlighted = beforeSel === '==' && afterSel === '==';
+  const threadBlock = buildThreadBlock(id, safeAuthor, commentText);
+  const anchorEdit = planAnchorEdit(fullText, targetOffset, targetOffset + anchor.length, anchor, id);
 
   const edit = new vscode.WorkspaceEdit();
-  const start = doc.positionAt(targetOffset);
-  const end = doc.positionAt(targetOffset + anchor.length);
-
-  if (alreadyHighlighted) {
-    edit.insert(doc.uri, doc.positionAt(targetOffset + anchor.length + 2), `[^${id}]`);
+  if (anchorEdit.kind === 'insertMarker') {
+    edit.insert(doc.uri, doc.positionAt(anchorEdit.offset), `[^${id}]`);
   } else {
-    edit.replace(doc.uri, new vscode.Range(start, end), `==${anchor}==[^${id}]`);
+    edit.replace(
+      doc.uri,
+      new vscode.Range(doc.positionAt(anchorEdit.startOffset), doc.positionAt(anchorEdit.endOffset)),
+      anchorEdit.replacement
+    );
   }
 
   const endPos = doc.lineAt(doc.lineCount - 1).range.end;
@@ -562,9 +604,13 @@ async function replyToComment(threadIdArg?: string, targetUri?: vscode.Uri): Pro
 
   const re = /\[\^(c-[^\]]+)\]:/g;
   const threadIds: string[] = [];
+  const seenThreadIds = new Set<string>();
   let m: RegExpExecArray | null;
   while ((m = re.exec(fullText)) !== null) {
-    if (!threadIds.includes(m[1])) threadIds.push(m[1]);
+    if (!seenThreadIds.has(m[1])) {
+      seenThreadIds.add(m[1]);
+      threadIds.push(m[1]);
+    }
   }
 
   if (threadIds.length === 0) {
@@ -585,12 +631,14 @@ async function replyToComment(threadIdArg?: string, targetUri?: vscode.Uri): Pro
       }
     }
 
-    const line = doc.lineAt(editor.selection.active.line).text;
-    const markerRe = /\[\^(c-[^\]]+)\]/g;
-    let lm: RegExpExecArray | null;
-    while ((lm = markerRe.exec(line)) !== null) {
-      preselected = lm[1];
-      break;
+    if (!preselected) {
+      const line = doc.lineAt(editor.selection.active.line).text;
+      const markerRe = /\[\^(c-[^\]]+)\]/g;
+      let lm: RegExpExecArray | null;
+      while ((lm = markerRe.exec(line)) !== null) {
+        preselected = lm[1];
+        break;
+      }
     }
   }
 
@@ -611,7 +659,7 @@ async function replyToComment(threadIdArg?: string, targetUri?: vscode.Uri): Pro
     prompt: `Reply to thread ${threadId}`,
     placeHolder: 'Write your reply…'
   });
-  if (!replyText) return false;
+  if (!replyText || !replyText.trim()) return false;
 
   return appendReplyToThread(doc.uri, threadId, author, replyText);
 }
@@ -625,9 +673,7 @@ async function appendReplyToThread(
   const doc = await vscode.workspace.openTextDocument(docUri);
   const fullText = doc.getText();
 
-  const date = todayISO();
-  const bodyLines = replyText.split('\n').map((line) => `    > ${line}`).join('\n');
-  const replyBlock = `\n    @${author} (${date}):\n${bodyLines}`;
+  const replyBlock = buildReplyBlock(author, replyText);
 
   const block = findThreadBlock(fullText, threadId);
   if (!block) {
@@ -636,7 +682,7 @@ async function appendReplyToThread(
   }
 
   const edit = new vscode.WorkspaceEdit();
-  edit.insert(doc.uri, doc.positionAt(block.end), replyBlock + '\n');
+  edit.insert(doc.uri, doc.positionAt(block.end), replyBlock);
   const ok = await vscode.workspace.applyEdit(edit);
   if (ok) {
     await doc.save();
@@ -769,7 +815,7 @@ class MdcommentsPreviewController {
     const webview = this.panel.webview;
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'preview.js'));
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'webview', 'preview.css'));
-    const nonce = Math.random().toString(36).slice(2);
+    const nonce = crypto.randomBytes(16).toString('hex');
 
     return `<!doctype html>
 <html lang="en">

@@ -23,6 +23,10 @@
   var contextMenuEl = null;
   var newThreadComposerEl = null;
 
+  if (!pageEl || !contentWrapEl || !contentEl || !inlineLayerEl || !sidebarEl || !titleEl) {
+    return;
+  }
+
   function closestFromTarget(target, selector) {
     return target && target.closest ? target.closest(selector) : null;
   }
@@ -217,7 +221,7 @@
 
     card.addEventListener('click', function () {
       focusThread(id);
-      var inline = contentEl.querySelector('.mdcomment-highlight[data-thread="' + id + '"]') || contentEl.querySelector('.mdcomment-badge[data-thread="' + id + '"]');
+      var inline = firstAnchorElement(id);
       if (inline) inline.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
@@ -357,14 +361,34 @@
     newThreadComposerEl = null;
   }
 
-  function openNewThreadComposer(payload, x, y) {
+  function closeOverlays(options) {
+    var keepComposer = !!(options && options.keepComposer);
     removeContextMenu();
-    removeComposer();
+    if (!keepComposer) {
+      removeComposer();
+    }
+  }
+
+  function clampPointToViewport(x, y, estWidth, estHeight) {
+    var padding = 8;
+    var width = Math.max(120, estWidth || 0);
+    var height = Math.max(60, estHeight || 0);
+    var maxX = Math.max(padding, window.innerWidth - width - padding);
+    var maxY = Math.max(padding, window.innerHeight - height - padding);
+    return {
+      x: Math.min(Math.max(padding, x), maxX),
+      y: Math.min(Math.max(padding, y), maxY)
+    };
+  }
+
+  function openNewThreadComposer(payload, x, y) {
+    closeOverlays();
 
     var card = document.createElement('div');
     card.className = 'mdcomment-new-thread-composer';
-    card.style.left = x + 'px';
-    card.style.top = y + 'px';
+    var composerPos = clampPointToViewport(x, y, Math.min(448, window.innerWidth - 24), 320);
+    card.style.left = composerPos.x + 'px';
+    card.style.top = composerPos.y + 'px';
 
     var title = document.createElement('div');
     title.className = 'mdcomment-new-thread-title';
@@ -439,8 +463,9 @@
 
     var menu = document.createElement('div');
     menu.className = 'mdcomment-context-menu';
-    menu.style.left = x + 'px';
-    menu.style.top = y + 'px';
+    var menuPos = clampPointToViewport(x, y, 240, 44);
+    menu.style.left = menuPos.x + 'px';
+    menu.style.top = menuPos.y + 'px';
 
     var button = document.createElement('button');
     button.type = 'button';
@@ -482,10 +507,7 @@
   if (addBtnTop) addBtnTop.addEventListener('click', handleAddNewClick);
 
   contentEl.addEventListener('click', function (e) {
-    removeContextMenu();
-    if (!closestFromTarget(e.target, '.mdcomment-new-thread-composer')) {
-      removeComposer();
-    }
+    closeOverlays();
 
     var target = e.target;
     if (!target || !target.closest) return;
@@ -527,8 +549,7 @@
     var t = e && e.target ? e.target : null;
     if (closestFromTarget(t, '.mdcomment-context-menu')) return;
     if (closestFromTarget(t, '.mdcomment-new-thread-composer')) return;
-    removeContextMenu();
-    removeComposer();
+    closeOverlays();
   });
 
   window.addEventListener('scroll', function () {
