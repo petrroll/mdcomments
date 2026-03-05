@@ -1,15 +1,41 @@
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 :root {
   color-scheme: light dark;
+  --mdc-accent: var(--vscode-textLink-foreground);
+  --mdc-accent-strong: var(--vscode-button-background);
+  --mdc-accent-strong-fg: var(--vscode-button-foreground);
+  --mdc-border: var(--vscode-panel-border);
+  --mdc-border-strong: var(--vscode-focusBorder);
+  --mdc-surface: var(--vscode-editor-background);
+  --mdc-surface-alt: var(--vscode-sideBar-background);
+  --mdc-surface-muted: var(--vscode-textCodeBlock-background);
+  --mdc-text: var(--vscode-foreground);
+  --mdc-muted: var(--vscode-descriptionForeground);
+  --mdc-danger: var(--vscode-errorForeground);
+  --mdc-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+  --mdc-shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.14);
+  --mdc-highlight-bg: #fef9c3;
+  --mdc-highlight-border: #facc15;
+  --mdc-highlight-hover: #fde68a;
+  --mdc-badge-open-bg: #dbeafe;
+  --mdc-badge-open-fg: #1d4ed8;
+  --mdc-badge-resolved-bg: #dcfce7;
+  --mdc-badge-resolved-fg: #15803d;
+  --mdc-avatar-bg: #818cf8;
 }
 
 body {
   margin: 0;
   padding: 0;
   font-family: var(--vscode-font-family);
-  color: var(--vscode-foreground);
-  background: var(--vscode-editor-background);
+  color: var(--mdc-text);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--mdc-accent) 10%, transparent), transparent 45%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, var(--mdc-accent) 8%, transparent), transparent 50%),
+    var(--mdc-surface);
 }
 
 .mdcomments-page {
@@ -23,16 +49,17 @@ body {
 .mdcomments-topbar {
   display: none;
   position: sticky;
-  top: 0.45rem;
+  top: 0.5rem;
   z-index: 4;
   width: 100%;
   justify-content: space-between;
   align-items: center;
   gap: 0.8rem;
   padding: 0.45rem 0.6rem;
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 8px;
-  background: var(--vscode-sideBar-background);
+  border: 1px solid var(--mdc-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--mdc-surface-alt) 86%, transparent);
+  backdrop-filter: blur(4px);
 }
 
 .mdcomments-content-wrap {
@@ -44,6 +71,11 @@ body {
 .mdcomments-content {
   flex: 1;
   min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--mdc-border) 80%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mdc-surface) 95%, transparent);
+  box-shadow: var(--mdc-shadow-soft);
+  padding: 1.15rem 1.3rem;
 }
 
 .mdcomment-inline-layer {
@@ -83,40 +115,71 @@ body {
 .mdcomments-page.mdcomments-layout-near-anchor .mdcomment-inline-layer .mdcomment-thread {
   width: 100%;
   margin: 0;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--mdc-shadow);
 }
 
 .mdcomments-page.mdcomments-layout-near-anchor .mdcomment-inline-layer .mdcomment-empty {
-  border: 1px dashed var(--vscode-panel-border);
-  border-radius: 8px;
-  background: var(--vscode-sideBar-background);
+  border: 1px dashed var(--mdc-border);
+  border-radius: 10px;
+  background: var(--mdc-surface-alt);
   padding: 0.55rem;
 }
 
 .mdcomments-content h1,
 .mdcomments-content h2,
 .mdcomments-content h3 {
-  border-bottom: 1px solid var(--vscode-panel-border);
+  border-bottom: 1px solid var(--mdc-border);
   padding-bottom: 0.25rem;
+  margin-top: 1.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.mdcomments-content h1 {
+  font-size: 1.5rem;
+}
+
+.mdcomments-content h2 {
+  font-size: 1.2rem;
+}
+
+.mdcomments-content h3 {
+  font-size: 1.05rem;
+}
+
+.mdcomments-content p,
+.mdcomments-content li {
+  line-height: 1.7;
 }
 
 .mdcomments-content hr {
   border: none;
-  border-top: 1px solid var(--vscode-panel-border);
+  border-top: 1px solid var(--mdc-border);
 }
 
 .mdcomments-content blockquote {
   margin: 0.5rem 0;
   padding: 0.2rem 0.8rem;
-  border-left: 3px solid var(--vscode-panel-border);
-  color: var(--vscode-descriptionForeground);
+  border-left: 3px solid var(--mdc-border);
+  color: var(--mdc-muted);
 }
 
 .mdcomments-content code {
   font-family: var(--vscode-editor-font-family);
-  background: var(--vscode-textCodeBlock-background);
+  background: var(--mdc-surface-muted);
   border-radius: 4px;
   padding: 0.05rem 0.3rem;
+}
+
+.mdcomments-content pre {
+  background: var(--mdc-surface-muted);
+  border-radius: 8px;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.mdcomments-content pre code {
+  background: transparent;
+  padding: 0;
 }
 
 .mdcomments-sidebar {
@@ -125,59 +188,76 @@ body {
   overflow-y: auto;
   position: sticky;
   top: 0.8rem;
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 8px;
-  background: var(--vscode-sideBar-background);
+  border: 1px solid var(--mdc-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mdc-surface-alt) 94%, transparent);
+  box-shadow: var(--mdc-shadow-soft);
 }
 
 .mdcomments-sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 0.7rem;
-  border-bottom: 1px solid var(--vscode-panel-border);
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--mdc-border);
   gap: 0.6rem;
+  position: sticky;
+  top: 0;
+  background: inherit;
+  z-index: 2;
 }
 
 .mdcomments-doc-title {
   font-size: 0.75rem;
-  color: var(--vscode-descriptionForeground);
+  color: var(--mdc-muted);
 }
 
 .mdcomment-add-btn {
-  border: 1px solid var(--vscode-panel-border);
+  border: 1px solid var(--mdc-border);
   background: transparent;
-  color: var(--vscode-textLink-foreground);
-  border-radius: 4px;
+  color: var(--mdc-accent);
+  border-radius: 6px;
   font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.2rem 0.55rem;
+  font-weight: 700;
+  padding: 0.22rem 0.6rem;
   cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.mdcomment-add-btn:hover {
+  border-color: var(--mdc-border-strong);
+  background: color-mix(in srgb, var(--mdc-accent) 9%, transparent);
 }
 
 .mdcomment-thread-list {
-  padding: 0.6rem;
+  padding: 0.65rem;
 }
 
 .mdcomment-empty {
-  color: var(--vscode-descriptionForeground);
+  color: var(--mdc-muted);
   font-size: 0.82rem;
-  padding: 0.5rem;
+  padding: 0.6rem;
+  border: 1px dashed var(--mdc-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--mdc-surface) 80%, transparent);
 }
 
 .mdcomment-thread {
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 8px;
-  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--mdc-border);
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
   padding-right: 1.9rem;
-  margin-bottom: 0.6rem;
-  background: var(--vscode-editor-background);
+  margin-bottom: 0.65rem;
+  background: var(--mdc-surface);
   position: relative;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  animation: mdc-fade-in 0.18s ease-out;
 }
 
 .mdcomment-thread.active,
 .mdcomment-thread:hover {
-  border-color: var(--vscode-focusBorder);
+  border-color: var(--mdc-border-strong);
+  transform: translateY(-1px);
 }
 
 .mdcomment-thread-header {
@@ -185,12 +265,12 @@ body {
   align-items: center;
   gap: 0.45rem;
   flex-wrap: wrap;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
 }
 
 .mdcomment-thread-anchor {
   font-size: 0.75rem;
-  color: var(--vscode-descriptionForeground);
+  color: var(--mdc-muted);
   font-style: italic;
   max-width: 13rem;
   overflow: hidden;
@@ -198,7 +278,9 @@ body {
   white-space: nowrap;
 }
 
-.mdcomment-thread-anchor::before { content: "📌 "; }
+.mdcomment-thread-anchor::before {
+  content: "# ";
+}
 
 .mdcomment-status {
   display: inline-block;
@@ -210,13 +292,13 @@ body {
 }
 
 .mdcomment-status-open {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: var(--mdc-badge-open-fg);
+  background: var(--mdc-badge-open-bg);
 }
 
 .mdcomment-status-resolved {
-  color: #15803d;
-  background: #dcfce7;
+  color: var(--mdc-badge-resolved-fg);
+  background: var(--mdc-badge-resolved-bg);
 }
 
 .mdcomment-thread-id {
@@ -224,7 +306,7 @@ body {
   border: none;
   padding: 0;
   background: transparent;
-  color: var(--vscode-descriptionForeground);
+  color: var(--mdc-muted);
   cursor: pointer;
   font-family: var(--vscode-editor-font-family);
   font-size: 0.7rem;
@@ -236,21 +318,21 @@ body {
   right: 0.45rem;
   border: none;
   background: transparent;
-  color: var(--vscode-descriptionForeground);
+  color: var(--mdc-muted);
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
 }
 
 .mdcomment-thread-close:hover {
-  color: var(--vscode-errorForeground);
+  color: var(--mdc-danger);
 }
 
 .mdcomment-thread-action {
-  border: 1px solid var(--vscode-panel-border);
+  border: 1px solid var(--mdc-border);
   background: transparent;
-  color: var(--vscode-foreground);
-  border-radius: 4px;
+  color: var(--mdc-text);
+  border-radius: 5px;
   font-size: 0.68rem;
   font-weight: 600;
   padding: 0.1rem 0.4rem;
@@ -258,12 +340,12 @@ body {
 }
 
 .mdcomment-thread-action-danger {
-  color: var(--vscode-errorForeground);
+  color: var(--mdc-danger);
 }
 
 .mdcomment-entry {
-  border-top: 1px solid var(--vscode-panel-border);
-  padding-top: 0.4rem;
+  border-top: 1px solid var(--mdc-border);
+  padding-top: 0.45rem;
   margin-top: 0.35rem;
 }
 
@@ -286,10 +368,10 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #fff;
   font-size: 0.68rem;
   font-weight: 700;
-  background: #8b5cf6;
+  background: var(--mdc-avatar-bg);
 }
 
 .mdcomment-author {
@@ -299,7 +381,7 @@ body {
 
 .mdcomment-date {
   font-size: 0.72rem;
-  color: var(--vscode-descriptionForeground);
+  color: var(--mdc-muted);
 }
 
 .mdcomment-body {
@@ -317,10 +399,10 @@ body {
 }
 
 .mdcomment-entry-menu-btn {
-  border: 1px solid var(--vscode-panel-border);
+  border: 1px solid var(--mdc-border);
   background: transparent;
-  color: var(--vscode-foreground);
-  border-radius: 4px;
+  color: var(--mdc-text);
+  border-radius: 5px;
   font-size: 0.75rem;
   font-weight: 600;
   min-width: 2rem;
@@ -333,9 +415,9 @@ body {
   top: calc(100% + 0.25rem);
   right: 0;
   min-width: 7rem;
-  border: 1px solid var(--vscode-panel-border);
+  border: 1px solid var(--mdc-border);
   border-radius: 6px;
-  background: var(--vscode-sideBar-background);
+  background: var(--mdc-surface-alt);
   padding: 0.25rem;
   z-index: 5;
 }
@@ -344,7 +426,7 @@ body {
   width: 100%;
   border: none;
   background: transparent;
-  color: var(--vscode-foreground);
+  color: var(--mdc-text);
   text-align: left;
   border-radius: 4px;
   font-size: 0.74rem;
@@ -357,7 +439,7 @@ body {
 }
 
 .mdcomment-entry-menu-item-danger {
-  color: var(--vscode-errorForeground);
+  color: var(--mdc-danger);
 }
 
 .mdcomment-entry-edit {
@@ -369,15 +451,15 @@ body {
 
 .mdcomment-reply-area {
   margin-top: 0.45rem;
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--vscode-panel-border);
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--mdc-border);
 }
 
 .mdcomment-reply-btn {
-  border: 1px solid var(--vscode-panel-border);
+  border: 1px solid var(--mdc-border);
   background: transparent;
-  color: var(--vscode-textLink-foreground);
-  border-radius: 4px;
+  color: var(--mdc-accent);
+  border-radius: 6px;
   font-size: 0.74rem;
   font-weight: 600;
   padding: 0.18rem 0.55rem;
@@ -393,11 +475,11 @@ body {
 .mdcomment-reply-author,
 .mdcomment-reply-text {
   width: 100%;
-  border: 1px solid var(--vscode-panel-border);
+  border: 1px solid var(--mdc-border);
   background: var(--vscode-input-background);
   color: var(--vscode-input-foreground);
-  border-radius: 4px;
-  padding: 0.35rem 0.45rem;
+  border-radius: 6px;
+  padding: 0.38rem 0.48rem;
   font: inherit;
   font-size: 0.78rem;
 }
@@ -414,27 +496,32 @@ body {
 
 .mdcomment-reply-post,
 .mdcomment-reply-cancel {
-  border: 1px solid var(--vscode-panel-border);
+  border: 1px solid var(--mdc-border);
   background: transparent;
-  color: var(--vscode-textLink-foreground);
-  border-radius: 4px;
+  color: var(--mdc-accent);
+  border-radius: 6px;
   font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.16rem 0.5rem;
+  font-weight: 700;
+  padding: 0.18rem 0.52rem;
   cursor: pointer;
 }
 
+.mdcomment-reply-post {
+  background: color-mix(in srgb, var(--mdc-accent-strong) 20%, transparent);
+}
+
 .mdcomment-highlight {
-  background: #fef9c3;
-  border-bottom: 2px solid #facc15;
+  background: var(--mdc-highlight-bg);
+  border-bottom: 2px solid var(--mdc-highlight-border);
   border-radius: 2px;
   padding: 0.03rem 0.12rem;
   cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .mdcomment-highlight.active,
 .mdcomment-highlight:hover {
-  background: #fde68a;
+  background: var(--mdc-highlight-hover);
 }
 
 .mdcomment-badge {
@@ -447,8 +534,8 @@ body {
   vertical-align: super;
   border-radius: 999px;
   border: none;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--mdc-badge-open-bg);
+  color: var(--mdc-badge-open-fg);
   cursor: pointer;
   font-size: 0.68rem;
   line-height: 1;
@@ -457,8 +544,8 @@ body {
 .mdcomment-context-menu {
   position: fixed;
   z-index: 10000;
-  border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
-  background: var(--vscode-menu-background, var(--vscode-editor-background));
+  border: 1px solid var(--mdc-border);
+  background: var(--vscode-menu-background, var(--mdc-surface));
   border-radius: 6px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   padding: 0.2rem;
@@ -467,7 +554,7 @@ body {
 .mdcomment-context-action {
   border: none;
   background: transparent;
-  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+  color: var(--vscode-menu-foreground, var(--mdc-text));
   font: inherit;
   font-size: 0.8rem;
   text-align: left;
@@ -485,10 +572,10 @@ body {
   position: fixed;
   z-index: 10001;
   width: min(28rem, calc(100vw - 1.5rem));
-  border: 1px solid var(--vscode-panel-border);
-  background: var(--vscode-editor-background);
-  border-radius: 8px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--mdc-border);
+  background: var(--mdc-surface);
+  border-radius: 10px;
+  box-shadow: var(--mdc-shadow);
   padding: 0.55rem;
   display: grid;
   gap: 0.4rem;
@@ -501,12 +588,23 @@ body {
 
 .mdcomment-new-thread-anchor {
   font-size: 0.74rem;
-  color: var(--vscode-descriptionForeground);
-  border: 1px dashed var(--vscode-panel-border);
+  color: var(--mdc-muted);
+  border: 1px dashed var(--mdc-border);
   border-radius: 4px;
   padding: 0.3rem 0.4rem;
   max-height: 5.5rem;
   overflow: auto;
+}
+
+@keyframes mdc-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 1000px) {
