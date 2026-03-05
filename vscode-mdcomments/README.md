@@ -63,6 +63,25 @@ Revenue grew by 15%[^c-rev1].
 
 See the full specification in the `specification.md` file in the mdcomments repository.
 
+## Installation
+
+Download the latest extension package (`.vsix`) from:
+
+- https://github.com/petrroll/mdcomments/releases
+
+Install it in VS Code:
+
+1. Open Extensions view.
+2. Click `...` (top-right menu).
+3. Choose **Install from VSIX...**.
+4. Select the downloaded `vscode-mdcomments-*.vsix` file.
+
+Or with the VS Code CLI:
+
+```bash
+code --install-extension vscode-mdcomments-*.vsix --force
+```
+
 ## Development
 
 ```bash
