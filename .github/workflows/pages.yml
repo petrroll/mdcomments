@@ -59,11 +59,21 @@ jobs:
 
           # Root pages
           cp index.html _site/
-          cp about.md overview.md rationale.md readme.md specification.md _site/ 2>/dev/null || true
+
+          # Render Markdown pages to HTML
+          for md in about.md overview.md rationale.md readme.md specification.md; do
+            [ -f "$md" ] && pandoc "$md" \
+              -o "_site/${md%.md}.html" \
+              --standalone --embed-resources --resource-path=. \
+              -c examples/shared/style-default.css
+          done
 
           # VS Code extension docs
           mkdir -p _site/vscode-mdcomments
-          cp vscode-mdcomments/README.md _site/vscode-mdcomments/
+          pandoc vscode-mdcomments/README.md \
+            -o _site/vscode-mdcomments/README.html \
+            --standalone --embed-resources --resource-path=. \
+            -c examples/shared/style-default.css
 
           # Examples: copy results viewer + built outputs
           cp examples/results.html _site/examples/
