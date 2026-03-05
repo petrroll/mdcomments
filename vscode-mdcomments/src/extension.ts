@@ -27,6 +27,68 @@ function nextCommentId(text: string): string {
   return `c-${max + 1}`;
 }
 
+function findOccurrenceOffsets(haystack: string, needle: string): number[] {
+  if (!needle) return [];
+  const offsets: number[] = [];
+  let from = 0;
+  while (from < haystack.length) {
+    const idx = haystack.indexOf(needle, from);
+    if (idx < 0) break;
+    offsets.push(idx);
+    from = idx + Math.max(1, needle.length);
+  }
+  return offsets;
+}
+
+function suffixOverlapLen(source: string, targetSuffix: string): number {
+  const maxLen = Math.min(source.length, targetSuffix.length);
+  for (let len = maxLen; len > 0; len--) {
+    if (source.slice(source.length - len) === targetSuffix.slice(targetSuffix.length - len)) {
+      return len;
+    }
+  }
+  return 0;
+}
+
+function prefixOverlapLen(source: string, targetPrefix: string): number {
+  const maxLen = Math.min(source.length, targetPrefix.length);
+  for (let len = maxLen; len > 0; len--) {
+    if (source.slice(0, len) === targetPrefix.slice(0, len)) {
+      return len;
+    }
+  }
+  return 0;
+}
+
+function pickBestOffsetByContext(
+  fullText: string,
+  offsets: number[],
+  anchorLen: number,
+  beforeContext?: string,
+  afterContext?: string
+): number | undefined {
+  if (!offsets.length) return undefined;
+
+  const before = beforeContext || '';
+  const after = afterContext || '';
+  if (!before && !after) return undefined;
+
+  let bestOffset: number | undefined;
+  let bestScore = -1;
+
+  for (const off of offsets) {
+    const left = fullText.slice(Math.max(0, off - before.length), off);
+    const right = fullText.slice(off + anchorLen, off + anchorLen + after.length);
+    const score = suffixOverlapLen(left, before) + prefixOverlapLen(right, after);
+    if (score > bestScore) {
+      bestScore = score;
+      bestOffset = off;
+    }
+  }
+
+  return bestOffset;
+}
+
 function threadStatus(threads: ThreadMap, id: string): string {
   return (threads[id]?.meta?.status || 'open').toLowerCase();
 }
@@ -217,6 +279,10 @@ async function addComment(targetUri?: vscode.Uri): Promise<boolean> {
     return false;
   }
 
+  return addCommentInEditor(editor);
+}
+
+async function addCommentInEditor(editor: vscode.TextEditor): Promise<boolean> {
   const selection = editor.selection;
   if (selection.isEmpty) {
     vscode.window.showInformationMessage('Select text in the editor to anchor a comment.');
@@ -246,7 +312,7 @@ async function addComment(targetUri?: vscode.Uri): Promise<boolean> {
 
   threadBlock += `    @${author} (${date}):\n${bodyLines}\n`;
 
-  return editor.edit((editBuilder) => {
+  const ok = await editor.edit((editBuilder) => {
     if (alreadyHighlighted) {
       const afterHighlight = new vscode.Position(selection.end.line, selection.end.character + 2);
       editBuilder.insert(afterHighlight, `[^${id}]`);
@@ -257,6 +323,81 @@ async function addComment(targetUri?: vscode.Uri): Promise<boolean> {
     const endPos = doc.lineAt(doc.lineCount - 1).range.end;
     editBuilder.insert(endPos, '\n' + threadBlock);
   });
+
+  if (ok) {
+    await doc.save();
+  }
+
+  return ok;
+}
+
+async function addCommentFromPreviewSelection(
+  targetUri: vscode.Uri,
+  selectedText: string,
+  occurrence: number,
+  author: string,
+  commentText: string,
+  beforeContext?: string,
+  afterContext?: string
+): Promise<boolean> {
+  const anchor = selectedText.trim();
+  if (!anchor) {
+    vscode.window.showInformationMessage('Select text in the preview to anchor a comment.');
+    return false;
+  }
+
+  if (!commentText.trim()) {
+    vscode.window.showInformationMessage('Comment text cannot be empty.');
+    return false;
+  }
+
+  const safeAuthor = author.trim() || vscode.workspace.getConfiguration('mdcomments').get<string>('defaultAuthor') || 'author';
+
+  const doc = await vscode.workspace.openTextDocument(targetUri);
+  if (doc.languageId !== 'markdown') {
+    vscode.window.showWarningMessage('Open a Markdown file first.');
+    return false;
+  }
+
+  const fullText = doc.getText();
+  const offsets = findOccurrenceOffsets(fullText, anchor);
+  if (!offsets.length) {
+    vscode.window.showWarningMessage('Could not map preview selection to source text. Try a shorter plain-text selection.');
+    return false;
+  }
+
+  const bestOffset = pickBestOffsetByContext(fullText, offsets, anchor.length, beforeContext, afterContext);
+  const fallbackIndex = occurrence > 0 && occurrence <= offsets.length ? occurrence - 1 : 0;
+  const targetOffset = typeof bestOffset === 'number' ? bestOffset : offsets[fallbackIndex];
+
+  const id = nextCommentId(fullText);
+  const date = todayISO();
+  const bodyLines = commentText.split('\n').map((line) => `    > ${line}`).join('\n');
+  let threadBlock = `\n[^${id}]:\n`;
+  threadBlock += `    @${safeAuthor} (${date}):\n${bodyLines}\n`;
+
+  const beforeSel = fullText.substring(Math.max(0, targetOffset - 2), targetOffset);
+  const afterSel = fullText.substring(targetOffset + anchor.length, Math.min(fullText.length, targetOffset + anchor.length + 2));
+  const alreadyHighlighted = beforeSel === '==' && afterSel === '==';
+
+  const edit = new vscode.WorkspaceEdit();
+  const start = doc.positionAt(targetOffset);
+  const end = doc.positionAt(targetOffset + anchor.length);
+
+  if (alreadyHighlighted) {
+    edit.insert(doc.uri, doc.positionAt(targetOffset + anchor.length + 2), `[^${id}]`);
+  } else {
+    edit.replace(doc.uri, new vscode.Range(start, end), `==${anchor}==[^${id}]`);
+  }
+
+  const endPos = doc.lineAt(doc.lineCount - 1).range.end;
+  edit.insert(doc.uri, endPos, '\n' + threadBlock);
+
+  const ok = await vscode.workspace.applyEdit(edit);
+  if (ok) {
+    await doc.save();
+  }
+  return ok;
 }
 
 async function replyToComment(threadIdArg?: string, targetUri?: vscode.Uri): Promise<boolean> {
@@ -422,6 +563,17 @@ class MdcommentsPreviewController {
             }
             await this.refresh();
             return;
+          case 'createThreadFromPreviewSelection': {
+            const selectedText = typeof message.selectedText === 'string' ? message.selectedText : '';
+            const occurrence = Number.isInteger(message.occurrence) ? Number(message.occurrence) : 1;
+            const author = typeof message.author === 'string' ? message.author : '';
+            const commentText = typeof message.commentText === 'string' ? message.commentText : '';
+            const beforeContext = typeof message.beforeContext === 'string' ? message.beforeContext : '';
+            const afterContext = typeof message.afterContext === 'string' ? message.afterContext : '';
+            await addCommentFromPreviewSelection(this.docUri, selectedText, occurrence, author, commentText, beforeContext, afterContext);
+            await this.refresh();
+            return;
+          }
           case 'revealThreadSource': {
             const threadId = String(message.threadId || '');
             if (threadId) await this.revealThreadInSource(threadId);
@@ -503,7 +655,8 @@ class MdcommentsPreviewController {
       payload: {
         docTitle: vscode.workspace.asRelativePath(this.docUri, false),
         contentHtml: rendered.contentHtml,
-        threads: rendered.threads
+        threads: rendered.threads,
+        defaultAuthor: vscode.workspace.getConfiguration('mdcomments').get<string>('defaultAuthor') || ''
       }
     });
   }

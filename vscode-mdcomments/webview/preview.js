@@ -13,6 +13,12 @@
   var sidebarEl = document.getElementById('mdcomments-threads');
   var titleEl = document.getElementById('mdcomments-doc-title');
   var addBtn = document.getElementById('mdcomments-add-btn');
+  var contextMenuEl = null;
+  var newThreadComposerEl = null;
+
+  function closestFromTarget(target, selector) {
+    return target && target.closest ? target.closest(selector) : null;
+  }
 
   function getStatus(thread) {
     return ((thread && thread.meta && thread.meta.status) || 'open').toLowerCase();
@@ -228,11 +234,169 @@
     renderThreads();
   }
 
+  function getPreviewSelectionPayload() {
+    var selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
+
+    var range = selection.getRangeAt(0);
+    if (!contentEl.contains(range.commonAncestorContainer)) return null;
+
+    var selectedText = (selection.toString() || '').trim();
+    if (!selectedText) return null;
+
+    var beforeRange = document.createRange();
+    beforeRange.selectNodeContents(contentEl);
+    beforeRange.setEnd(range.startContainer, range.startOffset);
+
+    var beforeText = beforeRange.toString();
+    var afterRange = document.createRange();
+    afterRange.selectNodeContents(contentEl);
+    afterRange.setStart(range.endContainer, range.endOffset);
+    var afterText = afterRange.toString();
+
+    var beforeContext = beforeText.slice(Math.max(0, beforeText.length - 48));
+    var afterContext = afterText.slice(0, 48);
+
+    var occurrence = 1;
+    var from = 0;
+    while (from < beforeText.length) {
+      var idx = beforeText.indexOf(selectedText, from);
+      if (idx < 0) break;
+      occurrence++;
+      from = idx + Math.max(1, selectedText.length);
+    }
+
+    return {
+      selectedText: selectedText,
+      occurrence: occurrence,
+      beforeContext: beforeContext,
+      afterContext: afterContext
+    };
+  }
+
+  function removeContextMenu() {
+    if (contextMenuEl && contextMenuEl.parentNode) {
+      contextMenuEl.parentNode.removeChild(contextMenuEl);
+    }
+    contextMenuEl = null;
+  }
+
+  function removeComposer() {
+    if (newThreadComposerEl && newThreadComposerEl.parentNode) {
+      newThreadComposerEl.parentNode.removeChild(newThreadComposerEl);
+    }
+    newThreadComposerEl = null;
+  }
+
+  function openNewThreadComposer(payload, x, y) {
+    removeContextMenu();
+    removeComposer();
+
+    var card = document.createElement('div');
+    card.className = 'mdcomment-new-thread-composer';
+    card.style.left = x + 'px';
+    card.style.top = y + 'px';
+
+    var title = document.createElement('div');
+    title.className = 'mdcomment-new-thread-title';
+    title.textContent = 'New thread';
+    card.appendChild(title);
+
+    var anchor = document.createElement('div');
+    anchor.className = 'mdcomment-new-thread-anchor';
+    anchor.textContent = payload.selectedText;
+    card.appendChild(anchor);
+
+    var authorInput = document.createElement('input');
+    authorInput.type = 'text';
+    authorInput.className = 'mdcomment-reply-author';
+    authorInput.placeholder = 'author';
+    authorInput.value = state.defaultAuthor || '';
+    card.appendChild(authorInput);
+
+    var bodyInput = document.createElement('textarea');
+    bodyInput.className = 'mdcomment-reply-text';
+    bodyInput.placeholder = 'Write your comment...';
+    card.appendChild(bodyInput);
+
+    var actions = document.createElement('div');
+    actions.className = 'mdcomment-reply-actions';
+
+    var createBtn = document.createElement('button');
+    createBtn.type = 'button';
+    createBtn.className = 'mdcomment-reply-post';
+    createBtn.textContent = 'Create';
+
+    var cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'mdcomment-reply-cancel';
+    cancelBtn.textContent = 'Cancel';
+
+    createBtn.addEventListener('click', function () {
+      var commentText = (bodyInput.value || '').trim();
+      if (!commentText) {
+        bodyInput.focus();
+        return;
+      }
+
+      var author = (authorInput.value || '').trim();
+      vscode.postMessage({
+        type: 'createThreadFromPreviewSelection',
+        selectedText: payload.selectedText,
+        occurrence: payload.occurrence,
+        beforeContext: payload.beforeContext,
+        afterContext: payload.afterContext,
+        author: author,
+        commentText: commentText
+      });
+      removeComposer();
+    });
+
+    cancelBtn.addEventListener('click', function () {
+      removeComposer();
+    });
+
+    actions.appendChild(createBtn);
+    actions.appendChild(cancelBtn);
+    card.appendChild(actions);
+
+    document.body.appendChild(card);
+    newThreadComposerEl = card;
+    bodyInput.focus();
+  }
+
+  function showContextMenu(x, y, payload) {
+    removeContextMenu();
+
+    var menu = document.createElement('div');
+    menu.className = 'mdcomment-context-menu';
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mdcomment-context-action';
+    button.textContent = 'New thread from selection';
+    button.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openNewThreadComposer(payload, x, y);
+    });
+
+    menu.appendChild(button);
+    document.body.appendChild(menu);
+    contextMenuEl = menu;
+  }
+
   addBtn.addEventListener('click', function () {
     vscode.postMessage({ type: 'addComment' });
   });
 
   contentEl.addEventListener('click', function (e) {
+    removeContextMenu();
+    if (!closestFromTarget(e.target, '.mdcomment-new-thread-composer')) {
+      removeComposer();
+    }
+
     var target = e.target;
     if (!target || !target.closest) return;
 
@@ -255,6 +419,31 @@
       }
     }
   });
+
+  contentEl.addEventListener('contextmenu', function (e) {
+    removeComposer();
+
+    var payload = getPreviewSelectionPayload();
+    if (!payload) {
+      removeContextMenu();
+      return;
+    }
+
+    e.preventDefault();
+    showContextMenu(e.clientX, e.clientY, payload);
+  });
+
+  document.addEventListener('click', function (e) {
+    var t = e && e.target ? e.target : null;
+    if (closestFromTarget(t, '.mdcomment-context-menu')) return;
+    if (closestFromTarget(t, '.mdcomment-new-thread-composer')) return;
+    removeContextMenu();
+    removeComposer();
+  });
+
+  window.addEventListener('scroll', function () {
+    removeContextMenu();
+  }, true);
 
   window.addEventListener('message', function (event) {
     var message = event.data;

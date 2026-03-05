@@ -16,6 +16,7 @@ The extension opens a custom side-by-side preview with a comment sidebar, with:
 - Highlighted anchor text with 💬 badges
 - Click a highlight ↔ focus the sidebar card (and vice versa)
 - Inline **Reply** and **+ New** buttons that trigger extension actions directly
+- Create a new thread straight from preview: select text, right-click, then choose **New thread from selection**
 
 ### Add Comment (command)
 
