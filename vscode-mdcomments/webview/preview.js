@@ -82,6 +82,14 @@
     card.id = 'thread-' + id;
     card.setAttribute('data-thread', id);
 
+    function closeEntryMenus(exceptEl) {
+      var menus = card.querySelectorAll('.mdcomment-entry-menu-list');
+      for (var mi = 0; mi < menus.length; mi++) {
+        if (exceptEl && menus[mi] === exceptEl) continue;
+        menus[mi].style.display = 'none';
+      }
+    }
+
     var header = document.createElement('div');
     header.className = 'mdcomment-thread-header';
 
@@ -98,6 +106,17 @@
     statusBadge.textContent = status === 'resolved' ? 'RESOLVED' : 'OPEN';
     header.appendChild(statusBadge);
 
+    var statusBtn = document.createElement('button');
+    statusBtn.type = 'button';
+    statusBtn.className = 'mdcomment-thread-action';
+    statusBtn.textContent = status === 'resolved' ? 'Reopen' : 'Resolve';
+    statusBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var nextStatus = status === 'resolved' ? 'open' : 'resolved';
+      vscode.postMessage({ type: 'setThreadStatus', threadId: id, status: nextStatus });
+    });
+    header.appendChild(statusBtn);
+
     var idLabel = document.createElement('button');
     idLabel.className = 'mdcomment-thread-id';
     idLabel.textContent = id;
@@ -110,40 +129,173 @@
 
     card.appendChild(header);
 
-    for (var i = 0; i < thread.entries.length; i++) {
-      var entry = thread.entries[i];
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'mdcomment-thread-close';
+    closeBtn.textContent = '×';
+    closeBtn.title = 'Remove thread';
+    closeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      vscode.postMessage({ type: 'removeThread', threadId: id });
+    });
+    card.appendChild(closeBtn);
 
-      var entryDiv = document.createElement('div');
+    for (let i = 0; i < thread.entries.length; i++) {
+      let entry = thread.entries[i];
+
+      const entryDiv = document.createElement('div');
       entryDiv.className = 'mdcomment-entry';
 
-      var meta = document.createElement('div');
+      const meta = document.createElement('div');
       meta.className = 'mdcomment-author-line';
 
-      var avatar = document.createElement('span');
+      const avatar = document.createElement('span');
       avatar.className = 'mdcomment-avatar';
       avatar.textContent = (entry.author || '?').charAt(0).toUpperCase();
       meta.appendChild(avatar);
 
-      var author = document.createElement('span');
+      const author = document.createElement('span');
       author.className = 'mdcomment-author';
       author.textContent = '@' + entry.author;
       meta.appendChild(author);
 
-      var date = document.createElement('span');
+      const date = document.createElement('span');
       date.className = 'mdcomment-date';
       date.textContent = entry.date;
       meta.appendChild(date);
 
+      const menuWrap = document.createElement('div');
+      menuWrap.className = 'mdcomment-entry-menu';
+
+      const menuBtn = document.createElement('button');
+      menuBtn.type = 'button';
+      menuBtn.className = 'mdcomment-entry-menu-btn';
+      menuBtn.textContent = '...';
+
+      const menuList = document.createElement('div');
+      menuList.className = 'mdcomment-entry-menu-list';
+      menuList.style.display = 'none';
+
+      const menuEditBtn = document.createElement('button');
+      menuEditBtn.type = 'button';
+      menuEditBtn.className = 'mdcomment-entry-menu-item';
+      menuEditBtn.textContent = 'Edit';
+
+      const menuRemoveBtn = document.createElement('button');
+      menuRemoveBtn.type = 'button';
+      menuRemoveBtn.className = 'mdcomment-entry-menu-item mdcomment-entry-menu-item-danger';
+      menuRemoveBtn.textContent = 'Remove';
+
+      const editEditor = document.createElement('div');
+      editEditor.className = 'mdcomment-entry-edit';
+      editEditor.style.display = 'none';
+
+      const editAuthorInput = document.createElement('input');
+      editAuthorInput.type = 'text';
+      editAuthorInput.className = 'mdcomment-reply-author';
+      editAuthorInput.value = entry.author || '';
+      editEditor.appendChild(editAuthorInput);
+
+      const editBodyInput = document.createElement('textarea');
+      editBodyInput.className = 'mdcomment-reply-text';
+      editBodyInput.value = (entry.bodyLines || []).join('\n');
+      editEditor.appendChild(editBodyInput);
+
+      const editActions = document.createElement('div');
+      editActions.className = 'mdcomment-reply-actions';
+
+      const saveEditBtn = document.createElement('button');
+      saveEditBtn.type = 'button';
+      saveEditBtn.className = 'mdcomment-reply-post';
+      saveEditBtn.textContent = 'Save';
+
+      const cancelEditBtn = document.createElement('button');
+      cancelEditBtn.type = 'button';
+      cancelEditBtn.className = 'mdcomment-reply-cancel';
+      cancelEditBtn.textContent = 'Cancel';
+
+      menuEditBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        menuList.style.display = 'none';
+        editEditor.style.display = editEditor.style.display === 'none' ? 'grid' : 'none';
+        if (editEditor.style.display !== 'none') {
+          editBodyInput.focus();
+        }
+      });
+
+      saveEditBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var nextAuthor = (editAuthorInput.value || '').trim();
+        var nextBody = (editBodyInput.value || '').trim();
+        if (!nextAuthor) {
+          editAuthorInput.focus();
+          return;
+        }
+        if (!nextBody) {
+          editBodyInput.focus();
+          return;
+        }
+
+        vscode.postMessage({
+          type: 'editCommentEntry',
+          threadId: id,
+          entryIndex: i,
+          author: nextAuthor,
+          commentText: nextBody
+        });
+        editEditor.style.display = 'none';
+      });
+
+      cancelEditBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        editAuthorInput.value = entry.author || '';
+        editBodyInput.value = (entry.bodyLines || []).join('\n');
+        editEditor.style.display = 'none';
+      });
+
+      menuRemoveBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        menuList.style.display = 'none';
+        vscode.postMessage({
+          type: 'removeCommentEntry',
+          threadId: id,
+          entryIndex: i
+        });
+      });
+
+      menuBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const willOpen = menuList.style.display === 'none';
+        closeEntryMenus(menuList);
+        menuList.style.display = willOpen ? 'block' : 'none';
+      });
+
+      menuWrap.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+
+      editActions.appendChild(saveEditBtn);
+      editActions.appendChild(cancelEditBtn);
+      editEditor.appendChild(editActions);
+
+      menuList.appendChild(menuEditBtn);
+      menuList.appendChild(menuRemoveBtn);
+      menuWrap.appendChild(menuBtn);
+      menuWrap.appendChild(menuList);
+      meta.appendChild(menuWrap);
+
       entryDiv.appendChild(meta);
 
-      var body = document.createElement('div');
+      const body = document.createElement('div');
       body.className = 'mdcomment-body';
-      for (var b = 0; b < entry.bodyLines.length; b++) {
-        var p = document.createElement('p');
+      for (let b = 0; b < entry.bodyLines.length; b++) {
+        const p = document.createElement('p');
         p.textContent = entry.bodyLines[b];
         body.appendChild(p);
       }
       entryDiv.appendChild(body);
+
+      entryDiv.appendChild(editEditor);
       card.appendChild(entryDiv);
     }
 
@@ -220,6 +372,7 @@
     card.appendChild(replyArea);
 
     card.addEventListener('click', function () {
+      closeEntryMenus();
       focusThread(id);
       var inline = firstAnchorElement(id);
       if (inline) inline.scrollIntoView({ behavior: 'smooth', block: 'center' });

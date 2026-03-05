@@ -109,6 +109,45 @@ function buildReplyBlock(author: string, commentText: string): string {
   return `\n${buildCommentEntry(author, commentText)}\n`;
 }
 
+function renderThreadBlock(threadId: string, thread: ThreadData): string {
+  const lines: string[] = [`[^${threadId}]:`];
+
+  const meta = thread.meta || {};
+  const knownMetaKeys = ['status', 'anchor', 'anchor_occurrence'];
+  const metaKeys: string[] = [];
+  for (const key of knownMetaKeys) {
+    if (typeof meta[key] === 'string' && meta[key].trim()) {
+      metaKeys.push(key);
+    }
+  }
+  for (const key of Object.keys(meta).sort()) {
+    if (!knownMetaKeys.includes(key) && typeof meta[key] === 'string' && meta[key].trim()) {
+      metaKeys.push(key);
+    }
+  }
+
+  for (const key of metaKeys) {
+    lines.push(`    ${key}: ${meta[key]}`);
+  }
+  if (metaKeys.length > 0 && thread.entries.length > 0) {
+    lines.push('');
+  }
+
+  for (let i = 0; i < thread.entries.length; i++) {
+    const entry = thread.entries[i];
+    lines.push(`    @${entry.author} (${entry.date}):`);
+    const bodyLines = entry.bodyLines.length ? entry.bodyLines : [''];
+    for (const bodyLine of bodyLines) {
+      lines.push(`    > ${bodyLine}`);
+    }
+    if (i < thread.entries.length - 1) {
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n');
+}
+
 type AnchorEditPlan =
   | { kind: 'insertMarker'; offset: number }
   | { kind: 'replaceSelection'; startOffset: number; endOffset: number; replacement: string };
@@ -436,15 +475,26 @@ class EditorCommentDecorations implements vscode.Disposable {
 function renderDocumentForWebview(source: string): { contentHtml: string; threads: ThreadMap } {
   const { threads, strippedSource } = parseThreadsFromSource(source);
   let cleaned = strippedSource;
+  const knownThreadIds = new Set(Object.keys(threads));
 
   cleaned = cleaned.replace(
-    /==([\s\S]*?)==\[\^(c-[^\]]+)\]/g,
-    (_m: string, text: string, id: string) => `${PH}HL:${id}:${text}${PH}END`
+    /==([^`\n]*?)==\[\^(c-[\w.\-]+)\]/g,
+    (_m: string, text: string, id: string) => {
+      if (!knownThreadIds.has(id)) {
+        return _m;
+      }
+      return `${PH}HL:${id}:${text}${PH}END`;
+    }
   );
 
   cleaned = cleaned.replace(
-    /\[\^(c-[^\]]+)\]/g,
-    (_m: string, id: string) => `${PH}PT:${id}${PH}END`
+    /\[\^(c-[\w.\-]+)\]/g,
+    (_m: string, id: string) => {
+      if (!knownThreadIds.has(id)) {
+        return _m;
+      }
+      return `${PH}PT:${id}${PH}END`;
+    }
   );
 
   cleaned = cleaned.replace(/\n\s*(?:---|\*\*\*|___)\s*\n*$/, '\n');
@@ -690,6 +740,140 @@ async function appendReplyToThread(
   return ok;
 }
 
+async function replaceThreadBlock(docUri: vscode.Uri, threadId: string, nextThread: ThreadData): Promise<boolean> {
+  const doc = await vscode.workspace.openTextDocument(docUri);
+  const fullText = doc.getText();
+  const block = findThreadBlock(fullText, threadId);
+  if (!block) {
+    vscode.window.showErrorMessage(`Thread ${threadId} not found.`);
+    return false;
+  }
+
+  const edit = new vscode.WorkspaceEdit();
+  edit.replace(
+    doc.uri,
+    new vscode.Range(doc.positionAt(block.start), doc.positionAt(block.end)),
+    renderThreadBlock(threadId, nextThread)
+  );
+
+  const ok = await vscode.workspace.applyEdit(edit);
+  if (ok) {
+    await doc.save();
+  }
+  return ok;
+}
+
+async function setThreadStatus(docUri: vscode.Uri, threadId: string, status: 'open' | 'resolved'): Promise<boolean> {
+  const doc = await vscode.workspace.openTextDocument(docUri);
+  const parsed = parseThreadsFromSource(doc.getText());
+  const thread = parsed.threads[threadId];
+  if (!thread) {
+    vscode.window.showErrorMessage(`Thread ${threadId} not found.`);
+    return false;
+  }
+
+  thread.meta = thread.meta || {};
+  thread.meta.status = status;
+  return replaceThreadBlock(docUri, threadId, thread);
+}
+
+async function editThreadEntry(
+  docUri: vscode.Uri,
+  threadId: string,
+  entryIndex: number,
+  author: string,
+  commentText: string
+): Promise<boolean> {
+  const cleanAuthor = author.trim();
+  const cleanText = commentText.trim();
+
+  if (!cleanAuthor) {
+    vscode.window.showWarningMessage('Author cannot be empty.');
+    return false;
+  }
+  if (!cleanText) {
+    vscode.window.showWarningMessage('Comment text cannot be empty.');
+    return false;
+  }
+
+  const doc = await vscode.workspace.openTextDocument(docUri);
+  const parsed = parseThreadsFromSource(doc.getText());
+  const thread = parsed.threads[threadId];
+  if (!thread) {
+    vscode.window.showErrorMessage(`Thread ${threadId} not found.`);
+    return false;
+  }
+  if (!Number.isInteger(entryIndex) || entryIndex < 0 || entryIndex >= thread.entries.length) {
+    vscode.window.showErrorMessage(`Comment entry ${entryIndex} not found in ${threadId}.`);
+    return false;
+  }
+
+  const existing = thread.entries[entryIndex];
+  thread.entries[entryIndex] = {
+    author: cleanAuthor,
+    date: existing.date,
+    bodyLines: cleanText.split('\n')
+  };
+
+  return replaceThreadBlock(docUri, threadId, thread);
+}
+
+async function removeThread(docUri: vscode.Uri, threadId: string): Promise<boolean> {
+  const doc = await vscode.workspace.openTextDocument(docUri);
+  const fullText = doc.getText();
+  const block = findThreadBlock(fullText, threadId);
+  if (!block) {
+    vscode.window.showErrorMessage(`Thread ${threadId} not found.`);
+    return false;
+  }
+
+  const escapedId = threadId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const rangeMarkerRe = new RegExp(`==([\\s\\S]*?)==\\[\\^${escapedId}\\]`, 'g');
+  const markerRe = new RegExp(`\\[\\^${escapedId}\\]`, 'g');
+
+  // Remove the full thread definition block first, then remove any references
+  // to this thread in the remaining document text.
+  const beforeBlock = fullText.slice(0, block.start);
+  const afterBlock = fullText.slice(block.end);
+  const cleanedBefore = beforeBlock.replace(rangeMarkerRe, '$1').replace(markerRe, '');
+  const cleanedAfter = afterBlock.replace(rangeMarkerRe, '$1').replace(markerRe, '');
+  const nextText = cleanedBefore + cleanedAfter;
+
+  const rewrite = new vscode.WorkspaceEdit();
+  rewrite.replace(
+    doc.uri,
+    new vscode.Range(doc.positionAt(0), doc.positionAt(fullText.length)),
+    nextText
+  );
+
+  const ok = await vscode.workspace.applyEdit(rewrite);
+  if (ok) {
+    await doc.save();
+  }
+  return ok;
+}
+
+async function removeThreadEntry(docUri: vscode.Uri, threadId: string, entryIndex: number): Promise<boolean> {
+  const doc = await vscode.workspace.openTextDocument(docUri);
+  const parsed = parseThreadsFromSource(doc.getText());
+  const thread = parsed.threads[threadId];
+  if (!thread) {
+    vscode.window.showErrorMessage(`Thread ${threadId} not found.`);
+    return false;
+  }
+  if (!Number.isInteger(entryIndex) || entryIndex < 0 || entryIndex >= thread.entries.length) {
+    vscode.window.showErrorMessage(`Comment entry ${entryIndex} not found in ${threadId}.`);
+    return false;
+  }
+
+  if (thread.entries.length === 1) {
+    return removeThread(docUri, threadId);
+  }
+
+  thread.entries.splice(entryIndex, 1);
+  return replaceThreadBlock(docUri, threadId, thread);
+}
+
 class MdcommentsPreviewController {
   private static current: MdcommentsPreviewController | undefined;
 
@@ -773,6 +957,43 @@ class MdcommentsPreviewController {
           case 'revealThreadSource': {
             const threadId = String(message.threadId || '');
             if (threadId) await this.revealThreadInSource(threadId);
+            return;
+          }
+          case 'setThreadStatus': {
+            const threadId = String(message.threadId || '');
+            const status = String(message.status || '').toLowerCase() === 'resolved' ? 'resolved' : 'open';
+            if (threadId) {
+              await setThreadStatus(this.docUri, threadId, status);
+              await this.refresh();
+            }
+            return;
+          }
+          case 'removeThread': {
+            const threadId = String(message.threadId || '');
+            if (threadId) {
+              await removeThread(this.docUri, threadId);
+              await this.refresh();
+            }
+            return;
+          }
+          case 'editCommentEntry': {
+            const threadId = String(message.threadId || '');
+            const entryIndex = Number.isInteger(message.entryIndex) ? Number(message.entryIndex) : -1;
+            const author = typeof message.author === 'string' ? message.author : '';
+            const commentText = typeof message.commentText === 'string' ? message.commentText : '';
+            if (threadId && entryIndex >= 0) {
+              await editThreadEntry(this.docUri, threadId, entryIndex, author, commentText);
+              await this.refresh();
+            }
+            return;
+          }
+          case 'removeCommentEntry': {
+            const threadId = String(message.threadId || '');
+            const entryIndex = Number.isInteger(message.entryIndex) ? Number(message.entryIndex) : -1;
+            if (threadId && entryIndex >= 0) {
+              await removeThreadEntry(this.docUri, threadId, entryIndex);
+              await this.refresh();
+            }
             return;
           }
           default:

@@ -169,8 +169,10 @@ body {
   border: 1px solid var(--vscode-panel-border);
   border-radius: 8px;
   padding: 0.65rem 0.75rem;
+  padding-right: 1.9rem;
   margin-bottom: 0.6rem;
   background: var(--vscode-editor-background);
+  position: relative;
 }
 
 .mdcomment-thread.active,
@@ -228,6 +230,37 @@ body {
   font-size: 0.7rem;
 }
 
+.mdcomment-thread-close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.45rem;
+  border: none;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mdcomment-thread-close:hover {
+  color: var(--vscode-errorForeground);
+}
+
+.mdcomment-thread-action {
+  border: 1px solid var(--vscode-panel-border);
+  background: transparent;
+  color: var(--vscode-foreground);
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  cursor: pointer;
+}
+
+.mdcomment-thread-action-danger {
+  color: var(--vscode-errorForeground);
+}
+
 .mdcomment-entry {
   border-top: 1px solid var(--vscode-panel-border);
   padding-top: 0.4rem;
@@ -276,6 +309,62 @@ body {
 
 .mdcomment-body p {
   margin: 0.2rem 0;
+}
+
+.mdcomment-entry-menu {
+  position: relative;
+  margin-left: auto;
+}
+
+.mdcomment-entry-menu-btn {
+  border: 1px solid var(--vscode-panel-border);
+  background: transparent;
+  color: var(--vscode-foreground);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 2rem;
+  padding: 0.1rem 0.35rem;
+  cursor: pointer;
+}
+
+.mdcomment-entry-menu-list {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  min-width: 7rem;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  background: var(--vscode-sideBar-background);
+  padding: 0.25rem;
+  z-index: 5;
+}
+
+.mdcomment-entry-menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  text-align: left;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  padding: 0.28rem 0.42rem;
+  cursor: pointer;
+}
+
+.mdcomment-entry-menu-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.mdcomment-entry-menu-item-danger {
+  color: var(--vscode-errorForeground);
+}
+
+.mdcomment-entry-edit {
+  margin-top: 0.35rem;
+  margin-left: 1.55rem;
+  display: grid;
+  gap: 0.35rem;
 }
 
 .mdcomment-reply-area {
