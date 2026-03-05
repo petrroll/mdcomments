@@ -45,6 +45,7 @@ The reply is inserted at the end of the chosen thread block.
 | Setting                    | Default | Description                                      |
 |----------------------------|---------|--------------------------------------------------|
 | `mdcomments.defaultAuthor` | `""`    | Author name for new comments. If empty, prompts. |
+| `mdcomments.commentPlacement` | `"nearAnchor"` | Unified behavior for both preview and editor: `sidebar` keeps preview sidebar and no editor-side snippets; `nearAnchor` enables right-side near-anchor comments in both places (Google Docs style). |
 
 ## mdcomments Format (quick reference)
 

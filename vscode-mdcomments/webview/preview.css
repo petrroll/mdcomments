@@ -17,11 +17,80 @@ body {
   gap: 1rem;
   align-items: flex-start;
   padding: 0.8rem;
+  position: relative;
+}
+
+.mdcomments-topbar {
+  display: none;
+  position: sticky;
+  top: 0.45rem;
+  z-index: 4;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  background: var(--vscode-sideBar-background);
+}
+
+.mdcomments-content-wrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
 }
 
 .mdcomments-content {
   flex: 1;
   min-width: 0;
+}
+
+.mdcomment-inline-layer {
+  display: none;
+}
+
+.mdcomments-page.mdcomments-layout-near-anchor .mdcomments-content-wrap {
+  padding-right: 23rem;
+}
+
+.mdcomments-page.mdcomments-layout-near-anchor {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.mdcomments-page.mdcomments-layout-near-anchor .mdcomments-topbar {
+  display: flex;
+}
+
+.mdcomments-page.mdcomments-layout-near-anchor .mdcomments-sidebar {
+  display: none;
+}
+
+.mdcomments-page.mdcomments-layout-sidebar .mdcomments-topbar {
+  display: none;
+}
+
+.mdcomments-page.mdcomments-layout-near-anchor .mdcomment-inline-layer {
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 22rem;
+  min-height: 100%;
+}
+
+.mdcomments-page.mdcomments-layout-near-anchor .mdcomment-inline-layer .mdcomment-thread {
+  width: 100%;
+  margin: 0;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+.mdcomments-page.mdcomments-layout-near-anchor .mdcomment-inline-layer .mdcomment-empty {
+  border: 1px dashed var(--vscode-panel-border);
+  border-radius: 8px;
+  background: var(--vscode-sideBar-background);
+  padding: 0.55rem;
 }
 
 .mdcomments-content h1,
@@ -354,6 +423,22 @@ body {
 @media (max-width: 1000px) {
   .mdcomments-page {
     flex-direction: column;
+  }
+
+  .mdcomments-topbar {
+    display: none;
+  }
+
+  .mdcomments-page.mdcomments-layout-near-anchor .mdcomments-content-wrap {
+    padding-right: 0;
+  }
+
+  .mdcomments-page.mdcomments-layout-near-anchor .mdcomment-inline-layer {
+    display: none;
+  }
+
+  .mdcomments-page.mdcomments-layout-near-anchor .mdcomments-sidebar {
+    display: block;
   }
 
   .mdcomments-sidebar {

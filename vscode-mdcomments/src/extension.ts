@@ -93,6 +93,22 @@ function threadStatus(threads: ThreadMap, id: string): string {
   return (threads[id]?.meta?.status || 'open').toLowerCase();
 }
 
+function getUnifiedCommentPlacement(cfg: vscode.WorkspaceConfiguration): 'sidebar' | 'nearAnchor' {
+  const unified = cfg.get<'sidebar' | 'nearAnchor'>('commentPlacement');
+  if (unified === 'sidebar' || unified === 'nearAnchor') {
+    return unified;
+  }
+
+  // Backward-compatible fallback for older extension settings.
+  const previewLegacy = cfg.get<'sidebar' | 'nearAnchor'>('previewCommentPlacement');
+  const editorLegacy = cfg.get<'off' | 'nearAnchor'>('editorCommentPlacement');
+  if (previewLegacy === 'nearAnchor' || editorLegacy === 'nearAnchor') {
+    return 'nearAnchor';
+  }
+
+  return 'sidebar';
+}
+
 function findThreadBlock(text: string, threadId: string): { start: number; end: number } | null {
   const lines = text.split('\n');
   const header = `[^${threadId}]:`;
@@ -215,7 +231,7 @@ function parseThreadsFromSource(src: string): { threads: ThreadMap; strippedSour
         continue;
       }
 
-      const authorMatch = trimmed.match(/^@(\S+)\s+\((\d{4}-\d{2}-\d{2})\):?\s*$/);
+      const authorMatch = trimmed.match(/^@(.+?)\s+\((\d{4}-\d{2}-\d{2})\):?\s*$/);
       if (authorMatch) {
         currentEntry = { author: authorMatch[1], date: authorMatch[2], bodyLines: [] };
         thread.entries.push(currentEntry);
@@ -232,6 +248,140 @@ function parseThreadsFromSource(src: string): { threads: ThreadMap; strippedSour
 
   const strippedSource = lines.filter((_, idx) => !removeLines.has(idx)).join('\n');
   return { threads, strippedSource };
+}
+
+function summarizeThreadForEditor(id: string, thread: ThreadData): string {
+  const status = (thread.meta?.status || 'open').toLowerCase() === 'resolved' ? 'RESOLVED' : 'OPEN';
+  const last = thread.entries[thread.entries.length - 1];
+  const author = last?.author ? ` @${last.author}` : '';
+  const body = (last?.bodyLines.find((line) => line.trim().length > 0) || '').replace(/\s+/g, ' ').trim();
+  const clipped = body ? body.slice(0, 72) + (body.length > 72 ? '...' : '') : '(no text)';
+  return `  |  ${status}${author}: ${clipped} [${id}]`;
+}
+
+function threadHoverMarkdown(id: string, thread: ThreadData): vscode.MarkdownString {
+  const status = (thread.meta?.status || 'open').toLowerCase() === 'resolved' ? 'resolved' : 'open';
+  const lines: string[] = [];
+  lines.push(`**Thread ${id}** (${status})`);
+
+  for (const entry of thread.entries) {
+    lines.push('');
+    lines.push(`- @${entry.author} (${entry.date})`);
+    for (const bodyLine of entry.bodyLines) {
+      lines.push(`  ${bodyLine}`);
+    }
+  }
+
+  return new vscode.MarkdownString(lines.join('\n'));
+}
+
+class EditorCommentDecorations implements vscode.Disposable {
+  private readonly decorationType: vscode.TextEditorDecorationType;
+  private readonly disposables: vscode.Disposable[] = [];
+
+  constructor() {
+    this.decorationType = vscode.window.createTextEditorDecorationType({
+      after: {
+        margin: '0 0 0 2rem',
+        fontStyle: 'italic',
+        color: new vscode.ThemeColor('editorCodeLens.foreground')
+      },
+      rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed
+    });
+
+    this.disposables.push(
+      vscode.window.onDidChangeVisibleTextEditors(() => this.refreshVisibleEditors()),
+      vscode.window.onDidChangeActiveTextEditor(() => this.refreshVisibleEditors()),
+      vscode.workspace.onDidChangeTextDocument((event) => this.refreshDocumentEditors(event.document.uri)),
+      vscode.workspace.onDidOpenTextDocument((doc) => this.refreshDocumentEditors(doc.uri)),
+      vscode.workspace.onDidCloseTextDocument((doc) => this.refreshDocumentEditors(doc.uri)),
+      vscode.workspace.onDidChangeConfiguration((event) => {
+        if (
+          event.affectsConfiguration('mdcomments.commentPlacement') ||
+          event.affectsConfiguration('mdcomments.previewCommentPlacement') ||
+          event.affectsConfiguration('mdcomments.editorCommentPlacement')
+        ) {
+          this.refreshVisibleEditors();
+        }
+      })
+    );
+
+    this.refreshVisibleEditors();
+  }
+
+  dispose(): void {
+    for (const d of this.disposables) d.dispose();
+    this.decorationType.dispose();
+  }
+
+  private refreshVisibleEditors(): void {
+    for (const editor of vscode.window.visibleTextEditors) {
+      this.refreshEditor(editor);
+    }
+  }
+
+  private refreshDocumentEditors(docUri: vscode.Uri): void {
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (editor.document.uri.toString() === docUri.toString()) {
+        this.refreshEditor(editor);
+      }
+    }
+  }
+
+  private refreshEditor(editor: vscode.TextEditor): void {
+    if (editor.document.languageId !== 'markdown') {
+      editor.setDecorations(this.decorationType, []);
+      return;
+    }
+
+    const cfg = vscode.workspace.getConfiguration('mdcomments');
+    const placement = getUnifiedCommentPlacement(cfg);
+    if (placement !== 'nearAnchor') {
+      editor.setDecorations(this.decorationType, []);
+      return;
+    }
+
+    const text = editor.document.getText();
+    const { threads } = parseThreadsFromSource(text);
+    const markerRe = /\[\^(c-[^\]]+)\]/g;
+    const seen = new Set<string>();
+    const decorations: vscode.DecorationOptions[] = [];
+
+    let m: RegExpExecArray | null;
+    while ((m = markerRe.exec(text)) !== null) {
+      const threadId = m[1];
+      const markerEnd = m.index + m[0].length;
+
+      // Ignore footnote-definition headers like "[^c-1]:".
+      if (text[markerEnd] === ':') {
+        continue;
+      }
+      if (seen.has(threadId)) {
+        continue;
+      }
+      seen.add(threadId);
+
+      const thread = threads[threadId];
+      if (!thread) {
+        continue;
+      }
+
+      const anchorPos = editor.document.positionAt(markerEnd);
+      const lineEnd = editor.document.lineAt(anchorPos.line).range.end;
+
+      decorations.push({
+        range: new vscode.Range(lineEnd, lineEnd),
+        renderOptions: {
+          after: {
+            contentText: summarizeThreadForEditor(threadId, thread)
+          }
+        },
+        hoverMessage: threadHoverMarkdown(threadId, thread)
+      });
+    }
+
+    editor.setDecorations(this.decorationType, decorations);
+  }
 }
 
 function renderDocumentForWebview(source: string): { contentHtml: string; threads: ThreadMap } {
@@ -597,6 +747,21 @@ class MdcommentsPreviewController {
       this.disposables
     );
 
+    vscode.workspace.onDidChangeConfiguration(
+      async (event) => {
+        if (
+          event.affectsConfiguration('mdcomments.defaultAuthor') ||
+          event.affectsConfiguration('mdcomments.commentPlacement') ||
+          event.affectsConfiguration('mdcomments.previewCommentPlacement') ||
+          event.affectsConfiguration('mdcomments.editorCommentPlacement')
+        ) {
+          await this.refresh();
+        }
+      },
+      null,
+      this.disposables
+    );
+
     this.panel.onDidDispose(() => this.dispose(true), null, this.disposables);
   }
 
@@ -616,9 +781,16 @@ class MdcommentsPreviewController {
   <title>mdcomments interactive preview</title>
 </head>
 <body>
-  <div class="mdcomments-page">
-    <main id="mdcomments-content" class="mdcomments-content"></main>
-    <aside class="mdcomments-sidebar">
+  <div class="mdcomments-page" id="mdcomments-page">
+    <div id="mdcomments-topbar" class="mdcomments-topbar">
+      <div id="mdcomments-doc-title-top" class="mdcomments-doc-title"></div>
+      <button id="mdcomments-add-btn-top" class="mdcomment-add-btn" type="button">+ New</button>
+    </div>
+    <div id="mdcomments-content-wrap" class="mdcomments-content-wrap">
+      <main id="mdcomments-content" class="mdcomments-content"></main>
+      <div id="mdcomments-inline-threads" class="mdcomment-inline-layer"></div>
+    </div>
+    <aside id="mdcomments-sidebar" class="mdcomments-sidebar">
       <div class="mdcomments-sidebar-header">
         <div>
           <div>💬 Comments</div>
@@ -649,6 +821,8 @@ class MdcommentsPreviewController {
   async refresh(): Promise<void> {
     const doc = await vscode.workspace.openTextDocument(this.docUri);
     const rendered = renderDocumentForWebview(doc.getText());
+    const cfg = vscode.workspace.getConfiguration('mdcomments');
+    const layoutMode = getUnifiedCommentPlacement(cfg);
 
     await this.panel.webview.postMessage({
       type: 'render',
@@ -656,7 +830,8 @@ class MdcommentsPreviewController {
         docTitle: vscode.workspace.asRelativePath(this.docUri, false),
         contentHtml: rendered.contentHtml,
         threads: rendered.threads,
-        defaultAuthor: vscode.workspace.getConfiguration('mdcomments').get<string>('defaultAuthor') || ''
+        defaultAuthor: cfg.get<string>('defaultAuthor') || '',
+        layoutMode
       }
     });
   }
@@ -681,7 +856,10 @@ class MdcommentsPreviewController {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+  const editorDecorations = new EditorCommentDecorations();
+
   context.subscriptions.push(
+    editorDecorations,
     vscode.commands.registerCommand('mdcomments.openInteractivePreview', async () => {
       await MdcommentsPreviewController.open(context);
     }),

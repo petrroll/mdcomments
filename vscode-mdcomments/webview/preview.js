@@ -6,13 +6,20 @@
   var state = {
     threads: {},
     anchorByThread: {},
-    defaultAuthor: ''
+    defaultAuthor: '',
+    layoutMode: 'sidebar'
   };
 
+  var pageEl = document.getElementById('mdcomments-page');
+  var contentWrapEl = document.getElementById('mdcomments-content-wrap');
   var contentEl = document.getElementById('mdcomments-content');
+  var inlineLayerEl = document.getElementById('mdcomments-inline-threads');
+  var sidebarContainerEl = document.getElementById('mdcomments-sidebar');
   var sidebarEl = document.getElementById('mdcomments-threads');
   var titleEl = document.getElementById('mdcomments-doc-title');
+  var titleTopEl = document.getElementById('mdcomments-doc-title-top');
   var addBtn = document.getElementById('mdcomments-add-btn');
+  var addBtnTop = document.getElementById('mdcomments-add-btn-top');
   var contextMenuEl = null;
   var newThreadComposerEl = null;
 
@@ -51,6 +58,16 @@
     contentEl.querySelectorAll('.mdcomment-highlight[data-thread="' + id + '"]').forEach(function (el) {
       el.classList.add('active');
     });
+  }
+
+  function getEffectiveLayoutMode() {
+    if (state.layoutMode === 'nearAnchor' && window.innerWidth > 1000) return 'nearAnchor';
+    return 'sidebar';
+  }
+
+  function firstAnchorElement(id) {
+    return contentEl.querySelector('.mdcomment-highlight[data-thread="' + id + '"]') ||
+      contentEl.querySelector('.mdcomment-badge[data-thread="' + id + '"]');
   }
 
   function buildThreadCard(id, thread) {
@@ -208,27 +225,79 @@
   }
 
   function renderThreads() {
+    var effectiveLayout = getEffectiveLayoutMode();
+    pageEl.classList.remove('mdcomments-layout-sidebar', 'mdcomments-layout-near-anchor');
+    pageEl.classList.add(effectiveLayout === 'nearAnchor' ? 'mdcomments-layout-near-anchor' : 'mdcomments-layout-sidebar');
+
     sidebarEl.innerHTML = '';
+    inlineLayerEl.innerHTML = '';
     var ids = Object.keys(state.threads);
+
+    var activeContainer = effectiveLayout === 'nearAnchor' ? inlineLayerEl : sidebarEl;
+    if (sidebarContainerEl) {
+      sidebarContainerEl.setAttribute('aria-hidden', effectiveLayout === 'nearAnchor' ? 'true' : 'false');
+    }
 
     if (!ids.length) {
       var empty = document.createElement('div');
       empty.className = 'mdcomment-empty';
       empty.textContent = 'No comment threads found in this document.';
-      sidebarEl.appendChild(empty);
+      activeContainer.appendChild(empty);
       return;
     }
 
-    for (var i = 0; i < ids.length; i++) {
-      sidebarEl.appendChild(buildThreadCard(ids[i], state.threads[ids[i]]));
+    if (effectiveLayout === 'nearAnchor') {
+      var wrapRect = contentWrapEl.getBoundingClientRect();
+      var stackCursor = 0;
+      var spacing = 12;
+
+      var positioned = [];
+      for (var i = 0; i < ids.length; i++) {
+        var id = ids[i];
+        var anchor = firstAnchorElement(id);
+        var top = 0;
+        if (anchor) {
+          var anchorRect = anchor.getBoundingClientRect();
+          top = Math.max(0, Math.round(anchorRect.top - wrapRect.top - 8));
+        }
+        positioned.push({ id: id, top: top, order: i });
+      }
+
+      positioned.sort(function (a, b) {
+        if (a.top === b.top) return a.order - b.order;
+        return a.top - b.top;
+      });
+
+      for (var p = 0; p < positioned.length; p++) {
+        var item = positioned[p];
+        var card = buildThreadCard(item.id, state.threads[item.id]);
+        card.style.position = 'absolute';
+        card.style.top = '0px';
+        card.style.left = '0';
+        card.style.right = '0';
+        inlineLayerEl.appendChild(card);
+
+        var resolvedTop = Math.max(item.top, stackCursor);
+        card.style.top = resolvedTop + 'px';
+        stackCursor = resolvedTop + card.offsetHeight + spacing;
+      }
+      return;
+    }
+
+    for (var j = 0; j < ids.length; j++) {
+      sidebarEl.appendChild(buildThreadCard(ids[j], state.threads[ids[j]]));
     }
   }
 
   function render(payload) {
     titleEl.textContent = payload.docTitle || 'Markdown';
+    if (titleTopEl) {
+      titleTopEl.textContent = payload.docTitle || 'Markdown';
+    }
     contentEl.innerHTML = payload.contentHtml || '';
     state.threads = payload.threads || {};
     state.defaultAuthor = payload.defaultAuthor || '';
+    state.layoutMode = payload.layoutMode === 'nearAnchor' ? 'nearAnchor' : 'sidebar';
     state.anchorByThread = firstAnchorMap();
 
     renderThreads();
@@ -387,9 +456,30 @@
     contextMenuEl = menu;
   }
 
-  addBtn.addEventListener('click', function () {
+  function handleAddNewClick(evt) {
+    var payload = getPreviewSelectionPayload();
+    if (payload) {
+      var x = 0;
+      var y = 0;
+      var target = evt && evt.currentTarget && evt.currentTarget.getBoundingClientRect
+        ? evt.currentTarget.getBoundingClientRect()
+        : null;
+      if (target) {
+        x = Math.round(target.left);
+        y = Math.round(target.bottom + 6);
+      } else {
+        x = Math.round(window.innerWidth * 0.5 - 140);
+        y = 64;
+      }
+      openNewThreadComposer(payload, x, y);
+      return;
+    }
+
     vscode.postMessage({ type: 'addComment' });
-  });
+  }
+
+  if (addBtn) addBtn.addEventListener('click', handleAddNewClick);
+  if (addBtnTop) addBtnTop.addEventListener('click', handleAddNewClick);
 
   contentEl.addEventListener('click', function (e) {
     removeContextMenu();
@@ -444,6 +534,10 @@
   window.addEventListener('scroll', function () {
     removeContextMenu();
   }, true);
+
+  window.addEventListener('resize', function () {
+    renderThreads();
+  });
 
   window.addEventListener('message', function (event) {
     var message = event.data;

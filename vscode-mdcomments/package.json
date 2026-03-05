@@ -69,6 +69,15 @@
           "type": "string",
           "default": "",
           "description": "Default author name for new comments. If empty, you'll be prompted each time."
+        },
+        "mdcomments.commentPlacement": {
+          "type": "string",
+          "enum": [
+            "sidebar",
+            "nearAnchor"
+          ],
+          "default": "nearAnchor",
+          "description": "Unified placement for comments in both interactive preview and Markdown editor. Use 'nearAnchor' for Google Docs style placement next to anchored content."
         }
       }
     }
