@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import MarkdownIt from 'markdown-it';
 
 type ThreadEntry = { author: string; date: string; bodyLines: string[] };
@@ -8,6 +10,8 @@ type ThreadMap = Record<string, ThreadData>;
 
 const md = new MarkdownIt({ html: false, linkify: true, typographer: true });
 const PH = '\u00abMDCMT\u00bb';
+const execFileAsync = promisify(execFile);
+const defaultAuthorCache = new Map<string, string>();
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -225,6 +229,61 @@ function getTargetMarkdownEditor(): vscode.TextEditor | undefined {
   return vscode.window.visibleTextEditors.find((editor) => editor.document.languageId === 'markdown');
 }
 
+function getWorkspaceScopeKey(targetUri?: vscode.Uri): string {
+  const ws = targetUri ? vscode.workspace.getWorkspaceFolder(targetUri) : undefined;
+  if (ws) return ws.uri.toString();
+  const first = vscode.workspace.workspaceFolders?.[0];
+  return first ? first.uri.toString() : '__global__';
+}
+
+function getWorkspaceFsPath(targetUri?: vscode.Uri): string | undefined {
+  const ws = targetUri ? vscode.workspace.getWorkspaceFolder(targetUri) : undefined;
+  if (ws) return ws.uri.fsPath;
+  return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+}
+
+function sanitizeAuthor(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const cleaned = value.trim().replace(/^@+/, '');
+  return cleaned || undefined;
+}
+
+async function detectGithubAuthor(): Promise<string | undefined> {
+  try {
+    const accounts = await vscode.authentication.getAccounts('github');
+    return sanitizeAuthor(accounts[0]?.label);
+  } catch {
+    return undefined;
+  }
+}
+
+async function detectGitAuthor(targetUri?: vscode.Uri): Promise<string | undefined> {
+  const cwd = getWorkspaceFsPath(targetUri);
+  if (!cwd) return undefined;
+
+  try {
+    const { stdout } = await execFileAsync('git', ['config', '--get', 'user.name'], { cwd });
+    return sanitizeAuthor(stdout);
+  } catch {
+    return undefined;
+  }
+}
+
+async function resolveDefaultAuthor(targetUri?: vscode.Uri): Promise<string | undefined> {
+  const configured = sanitizeAuthor(vscode.workspace.getConfiguration('mdcomments').get<string>('defaultAuthor'));
+  if (configured) return configured;
+
+  const scopeKey = getWorkspaceScopeKey(targetUri);
+  const cached = defaultAuthorCache.get(scopeKey);
+  if (cached) return cached;
+
+  const detected = (await detectGithubAuthor()) || (await detectGitAuthor(targetUri));
+  if (detected) {
+    defaultAuthorCache.set(scopeKey, detected);
+  }
+  return detected;
+}
+
 async function resolveMarkdownEditor(targetUri?: vscode.Uri): Promise<vscode.TextEditor | undefined> {
   if (!targetUri) return getTargetMarkdownEditor();
 
@@ -245,9 +304,8 @@ async function resolveMarkdownEditor(targetUri?: vscode.Uri): Promise<vscode.Tex
   }
 }
 
-async function getAuthor(): Promise<string | undefined> {
-  const cfg = vscode.workspace.getConfiguration('mdcomments');
-  const defaultAuthor = cfg.get<string>('defaultAuthor');
+async function getAuthor(targetUri?: vscode.Uri): Promise<string | undefined> {
+  const defaultAuthor = await resolveDefaultAuthor(targetUri);
   if (defaultAuthor) return defaultAuthor;
 
   return vscode.window.showInputBox({
@@ -538,7 +596,7 @@ async function addCommentInEditor(editor: vscode.TextEditor): Promise<boolean> {
     return false;
   }
 
-  const author = await getAuthor();
+  const author = await getAuthor(editor.document.uri);
   if (!author) return false;
 
   const commentText = await vscode.window.showInputBox({
@@ -598,7 +656,7 @@ async function addCommentFromPreviewSelection(
     return false;
   }
 
-  const safeAuthor = author.trim() || vscode.workspace.getConfiguration('mdcomments').get<string>('defaultAuthor') || 'author';
+  const safeAuthor = sanitizeAuthor(author) || (await resolveDefaultAuthor(targetUri)) || 'author';
 
   const doc = await vscode.workspace.openTextDocument(targetUri);
   if (doc.languageId !== 'markdown') {
@@ -702,7 +760,7 @@ async function replyToComment(threadIdArg?: string, targetUri?: vscode.Uri): Pro
     threadId = picked.label;
   }
 
-  const author = await getAuthor();
+  const author = await getAuthor(doc.uri);
   if (!author) return false;
 
   const replyText = await vscode.window.showInputBox({
@@ -932,10 +990,9 @@ class MdcommentsPreviewController {
             return;
           case 'replyToComment':
             if (typeof message.replyText === 'string' && message.replyText.trim()) {
-              const cfg = vscode.workspace.getConfiguration('mdcomments');
-              const defaultAuthor = cfg.get<string>('defaultAuthor') || 'author';
+              const defaultAuthor = (await resolveDefaultAuthor(this.docUri)) || 'author';
               const author = typeof message.author === 'string' && message.author.trim()
-                ? message.author.trim()
+                ? message.author.trim().replace(/^@+/, '')
                 : defaultAuthor;
               await appendReplyToThread(this.docUri, String(message.threadId || ''), author, message.replyText.trim());
             } else {
@@ -1097,7 +1154,7 @@ class MdcommentsPreviewController {
         docTitle: vscode.workspace.asRelativePath(this.docUri, false),
         contentHtml: rendered.contentHtml,
         threads: rendered.threads,
-        defaultAuthor: cfg.get<string>('defaultAuthor') || '',
+        defaultAuthor: (await resolveDefaultAuthor(this.docUri)) || '',
         layoutMode
       }
     });
@@ -1123,6 +1180,14 @@ class MdcommentsPreviewController {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration('mdcomments.defaultAuthor')) {
+        defaultAuthorCache.clear();
+      }
+    })
+  );
+
   const editorDecorations = new EditorCommentDecorations();
 
   context.subscriptions.push(

@@ -24,7 +24,8 @@ The extension opens a custom side-by-side preview with a comment sidebar, with:
 2. Select the text you want to comment on.
 3. Run **mdcomments: Add Comment** from the Command Palette or the
    editor context menu.
-4. Enter your author name (or set `mdcomments.defaultAuthor` in settings)
+4. Enter your author name (or set `mdcomments.defaultAuthor` in settings).
+   If unset, the extension tries VS Code GitHub account name, then Git `user.name`.
    and comment text.
 
 The extension wraps the selected text in `==…==` highlight markers, inserts a
@@ -44,7 +45,7 @@ The reply is inserted at the end of the chosen thread block.
 
 | Setting                    | Default | Description                                      |
 |----------------------------|---------|--------------------------------------------------|
-| `mdcomments.defaultAuthor` | `""`    | Author name for new comments. If empty, prompts. |
+| `mdcomments.defaultAuthor` | `""`    | Author name for new comments. If empty, auto-detects from VS Code GitHub account, then Git `user.name`, otherwise prompts. |
 | `mdcomments.commentPlacement` | `"nearAnchor"` | Unified behavior for both preview and editor: `sidebar` keeps preview sidebar and no editor-side snippets; `nearAnchor` enables right-side near-anchor comments in both places (Google Docs style). |
 
 ## mdcomments Format (quick reference)

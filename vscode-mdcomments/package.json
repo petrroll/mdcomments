@@ -68,7 +68,7 @@
         "mdcomments.defaultAuthor": {
           "type": "string",
           "default": "",
-          "description": "Default author name for new comments. If empty, you'll be prompted each time."
+          "description": "Default author name for new comments. If empty, mdcomments tries VS Code GitHub account name, then Git user.name, and prompts only if nothing is found."
         },
         "mdcomments.commentPlacement": {
           "type": "string",
