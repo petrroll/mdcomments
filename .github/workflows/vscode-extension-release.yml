@@ -1,0 +1,78 @@
+name: Build and Release VS Code Extension
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create/update (example: v0.1.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release-vsix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: vscode-mdcomments/package-lock.json
+
+      - name: Install extension dependencies
+        run: cd vscode-mdcomments && npm ci
+
+      - name: Compile extension
+        run: cd vscode-mdcomments && npm run compile
+
+      - name: Package .vsix
+        run: cd vscode-mdcomments && npx --yes @vscode/vsce package --allow-missing-repository --skip-license
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+
+          vsix_path=$(ls -t vscode-mdcomments/*.vsix | head -n 1)
+          vsix_name=$(basename "$vsix_path")
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
+          echo "vsix_name=$vsix_name" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ steps.meta.outputs.tag }}"
+          vsix_path="${{ steps.meta.outputs.vsix_path }}"
+          vsix_name="${{ steps.meta.outputs.vsix_name }}"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$vsix_path" --clobber
+          else
+            gh release create "$tag" "$vsix_path" \
+              --title "mdcomments VS Code extension $tag" \
+              --notes "Automated release for the VS Code extension package ($vsix_name)." \
+              --target "${GITHUB_SHA}"
+          fi
