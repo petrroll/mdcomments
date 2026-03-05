@@ -1,0 +1,309 @@
+* { box-sizing: border-box; }
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vscode-font-family);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+}
+
+.mdcomments-page {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 0.8rem;
+}
+
+.mdcomments-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mdcomments-content h1,
+.mdcomments-content h2,
+.mdcomments-content h3 {
+  border-bottom: 1px solid var(--vscode-panel-border);
+  padding-bottom: 0.25rem;
+}
+
+.mdcomments-content hr {
+  border: none;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.mdcomments-content blockquote {
+  margin: 0.5rem 0;
+  padding: 0.2rem 0.8rem;
+  border-left: 3px solid var(--vscode-panel-border);
+  color: var(--vscode-descriptionForeground);
+}
+
+.mdcomments-content code {
+  font-family: var(--vscode-editor-font-family);
+  background: var(--vscode-textCodeBlock-background);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+}
+
+.mdcomments-sidebar {
+  width: 24rem;
+  max-height: calc(100vh - 1.6rem);
+  overflow-y: auto;
+  position: sticky;
+  top: 0.8rem;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  background: var(--vscode-sideBar-background);
+}
+
+.mdcomments-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.7rem;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  gap: 0.6rem;
+}
+
+.mdcomments-doc-title {
+  font-size: 0.75rem;
+  color: var(--vscode-descriptionForeground);
+}
+
+.mdcomment-add-btn {
+  border: 1px solid var(--vscode-panel-border);
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+}
+
+.mdcomment-thread-list {
+  padding: 0.6rem;
+}
+
+.mdcomment-empty {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.82rem;
+  padding: 0.5rem;
+}
+
+.mdcomment-thread {
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.6rem;
+  background: var(--vscode-editor-background);
+}
+
+.mdcomment-thread.active,
+.mdcomment-thread:hover {
+  border-color: var(--vscode-focusBorder);
+}
+
+.mdcomment-thread-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.mdcomment-thread-anchor {
+  font-size: 0.75rem;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  max-width: 13rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mdcomment-thread-anchor::before { content: "📌 "; }
+
+.mdcomment-status {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.mdcomment-status-open {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.mdcomment-status-resolved {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.mdcomment-thread-id {
+  margin-left: auto;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.7rem;
+}
+
+.mdcomment-entry {
+  border-top: 1px solid var(--vscode-panel-border);
+  padding-top: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.mdcomment-entry:first-of-type {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.mdcomment-author-line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mdcomment-avatar {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #8b5cf6;
+}
+
+.mdcomment-author {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.mdcomment-date {
+  font-size: 0.72rem;
+  color: var(--vscode-descriptionForeground);
+}
+
+.mdcomment-body {
+  font-size: 0.82rem;
+  padding-left: 1.55rem;
+}
+
+.mdcomment-body p {
+  margin: 0.2rem 0;
+}
+
+.mdcomment-reply-area {
+  margin-top: 0.45rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.mdcomment-reply-btn {
+  border: 1px solid var(--vscode-panel-border);
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+  border-radius: 4px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.18rem 0.55rem;
+  cursor: pointer;
+}
+
+.mdcomment-reply-editor {
+  margin-top: 0.45rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.mdcomment-reply-author,
+.mdcomment-reply-text {
+  width: 100%;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border-radius: 4px;
+  padding: 0.35rem 0.45rem;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.mdcomment-reply-text {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.mdcomment-reply-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.mdcomment-reply-post,
+.mdcomment-reply-cancel {
+  border: 1px solid var(--vscode-panel-border);
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.16rem 0.5rem;
+  cursor: pointer;
+}
+
+.mdcomment-highlight {
+  background: #fef9c3;
+  border-bottom: 2px solid #facc15;
+  border-radius: 2px;
+  padding: 0.03rem 0.12rem;
+  cursor: pointer;
+}
+
+.mdcomment-highlight.active,
+.mdcomment-highlight:hover {
+  background: #fde68a;
+}
+
+.mdcomment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15em;
+  height: 1.15em;
+  margin-left: 0.1em;
+  vertical-align: super;
+  border-radius: 999px;
+  border: none;
+  background: #dbeafe;
+  color: #1d4ed8;
+  cursor: pointer;
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+@media (max-width: 1000px) {
+  .mdcomments-page {
+    flex-direction: column;
+  }
+
+  .mdcomments-sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+}

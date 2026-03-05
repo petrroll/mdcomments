@@ -42,3 +42,24 @@ serve: build-examples
     @command -v serve &>/dev/null || { echo "✗ 'serve' not found — run 'just install' first."; exit 1; }
     @echo "Serving ./ at http://localhost:3000 …"
     serve ./
+
+# ── VS Code Extension ────────────────────────────────────────
+
+# Compile the VS Code extension TypeScript
+vscode-compile:
+    cd vscode-mdcomments && npm install --silent && npm run compile
+
+# Package the extension as a .vsix
+vscode-package: vscode-compile
+    cd vscode-mdcomments && npx @vscode/vsce package --allow-missing-repository --skip-license
+
+# Install the extension into the current VS Code / Codespace
+vscode-install: vscode-package
+    @vsix=$(ls -t vscode-mdcomments/*.vsix 2>/dev/null | head -n 1); \
+    [[ -n "$vsix" ]] || { echo "✗ No .vsix found in vscode-mdcomments/. Run 'just vscode-package' first."; exit 1; }; \
+    command -v code >/dev/null 2>&1 || { echo "✗ 'code' CLI not found. In Codespaces Web, use Extensions -> ... -> Install from VSIX and pick $vsix"; exit 1; }; \
+    code --install-extension "$vsix" --force
+    @echo "Reload VS Code window: Ctrl+Shift+P → Developer: Reload Window"
+
+# One-shot: compile, package, install
+vscode: vscode-install

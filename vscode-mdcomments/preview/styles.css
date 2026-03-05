@@ -1,0 +1,286 @@
+/* ── mdcomments — VS Code Markdown Preview Styles ─────────────────── */
+
+/* ── Page Layout (content + sidebar) ─────────────────────────────── */
+.mdcomments-page {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.mdcomments-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────── */
+.mdcomments-sidebar {
+  width: 22rem;
+  flex-shrink: 0;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+
+.mdcomments-sidebar-header {
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.5rem 0.65rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid var(--vscode-panel-border, #e5e7eb);
+  color: var(--vscode-foreground, #1a1a1a);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mdcomment-add-btn {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground, #007acc);
+  background: none;
+  border: 1px solid var(--vscode-panel-border, #ddd);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mdcomment-add-btn:hover {
+  background: var(--vscode-list-hoverBackground, #f3f3f3);
+}
+
+/* ── Thread Card ─────────────────────────────────────────────────── */
+.mdcomment-thread {
+  background: var(--vscode-editor-background, #fff);
+  border: 1px solid var(--vscode-panel-border, #e0e0e0);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.6rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.mdcomment-thread:hover,
+.mdcomment-thread.active {
+  border-color: var(--vscode-focusBorder, #007acc);
+  box-shadow: 0 0 0 1px var(--vscode-focusBorder, #007acc22);
+}
+
+.mdcomment-thread-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.mdcomment-thread-anchor {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--vscode-descriptionForeground, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
+
+.mdcomment-thread-anchor::before {
+  content: "📌 ";
+}
+
+.mdcomment-thread-id {
+  font-size: 0.65rem;
+  font-family: var(--vscode-editor-font-family, monospace);
+  color: var(--vscode-descriptionForeground, #999);
+  margin-left: auto;
+}
+
+/* ── Status Badge ────────────────────────────────────────────────── */
+.mdcomment-status {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1em 0.5em;
+  border-radius: 999px;
+}
+
+.mdcomment-status-open {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.mdcomment-status-resolved {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+/* Dark theme overrides */
+.vscode-dark .mdcomment-status-open {
+  color: #93c5fd;
+  background: #1e3a5f;
+}
+
+.vscode-dark .mdcomment-status-resolved {
+  color: #86efac;
+  background: #14532d;
+}
+
+/* ── Comment Entry ───────────────────────────────────────────────── */
+.mdcomment-entry {
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--vscode-panel-border, #e5e7eb);
+}
+
+.mdcomment-entry:first-of-type {
+  border-top: none;
+}
+
+.mdcomment-author-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.15rem;
+}
+
+.mdcomment-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: #818cf8;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mdcomment-author {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--vscode-foreground, #1a1a1a);
+}
+
+.mdcomment-date {
+  font-size: 0.7rem;
+  color: var(--vscode-descriptionForeground, #6b7280);
+}
+
+.mdcomment-body {
+  padding-left: calc(1.4rem + 0.4rem);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--vscode-foreground, #1a1a1a);
+}
+
+.mdcomment-body p {
+  margin: 0.15rem 0;
+}
+
+/* ── Reply Button ────────────────────────────────────────────────── */
+.mdcomment-reply-area {
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--vscode-panel-border, #e5e7eb);
+}
+
+.mdcomment-reply-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground, #007acc);
+  background: none;
+  border: 1px solid var(--vscode-panel-border, #ddd);
+  border-radius: 4px;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mdcomment-reply-btn:hover {
+  background: var(--vscode-list-hoverBackground, #f3f3f3);
+}
+
+/* ── Inline Highlights & Badges ──────────────────────────────────── */
+.mdcomment-highlight {
+  background: #fef9c3;
+  border-bottom: 2px solid #facc15;
+  padding: 0.05em 0.15em;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mdcomment-highlight:hover,
+.mdcomment-highlight.active {
+  background: #fde68a;
+}
+
+.vscode-dark .mdcomment-highlight {
+  background: #422006;
+  border-bottom-color: #a16207;
+}
+
+.vscode-dark .mdcomment-highlight:hover,
+.vscode-dark .mdcomment-highlight.active {
+  background: #713f12;
+}
+
+.mdcomment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2em;
+  height: 1.2em;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-radius: 50%;
+  vertical-align: super;
+  margin-left: 0.1em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.1s;
+}
+
+.mdcomment-badge:hover {
+  transform: scale(1.2);
+}
+
+.mdcomment-badge[data-status="resolved"] {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.vscode-dark .mdcomment-badge {
+  color: #93c5fd;
+  background: #1e3a5f;
+}
+
+.vscode-dark .mdcomment-badge[data-status="resolved"] {
+  color: #86efac;
+  background: #14532d;
+}
+
+/* ── Responsive: narrow preview ──────────────────────────────────── */
+@media (max-width: 42rem) {
+  .mdcomments-page {
+    flex-direction: column;
+  }
+  .mdcomments-sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+}
+
+/* ── Hide standard footnotes section (they're rendered as sidebar) ─ */
+.mdcomments-content section.footnotes,
+.mdcomments-content .footnotes,
+.mdcomments-content [role="doc-endnotes"] {
+  display: none;
+}

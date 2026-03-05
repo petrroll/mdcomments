@@ -1,0 +1,90 @@
+{
+  "name": "vscode-mdcomments",
+  "displayName": "mdcomments",
+  "description": "Add and reply to comments in Markdown files using the mdcomments format, with a dedicated interactive webview preview.",
+  "version": "0.1.0",
+  "publisher": "petrroll",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mdcomments.openInteractivePreview",
+        "title": "mdcomments: Open Interactive Preview"
+      },
+      {
+        "command": "mdcomments.addComment",
+        "title": "mdcomments: Add Comment"
+      },
+      {
+        "command": "mdcomments.replyToComment",
+        "title": "mdcomments: Reply to Comment"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mdcomments.openInteractivePreview",
+          "when": "editorLangId == markdown",
+          "group": "mdcomments@1"
+        },
+        {
+          "command": "mdcomments.addComment",
+          "when": "editorLangId == markdown",
+          "group": "mdcomments@2"
+        },
+        {
+          "command": "mdcomments.replyToComment",
+          "when": "editorLangId == markdown",
+          "group": "mdcomments@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "mdcomments.openInteractivePreview",
+          "when": "editorLangId == markdown"
+        },
+        {
+          "command": "mdcomments.addComment",
+          "when": "editorLangId == markdown"
+        },
+        {
+          "command": "mdcomments.replyToComment",
+          "when": "editorLangId == markdown"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "mdcomments",
+      "properties": {
+        "mdcomments.defaultAuthor": {
+          "type": "string",
+          "default": "",
+          "description": "Default author name for new comments. If empty, you'll be prompted each time."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "dependencies": {
+    "markdown-it": "^14.1.0"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^13.0.0",
+    "@types/node": "^25.3.3",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -42,3 +42,16 @@ See [`specification.md`](specification.md) for the normative mdcomments format d
 See [cross-parser examples](examples/) for a side-by-side comparison of how mdcomments renders across five Markdown systems (markdown-it, Pandoc, MkDocs, Showdown, and Comrak), both with default settings and with purpose-built plugins.
 
 Try the [interactive editor](examples/interactive-editor/) — a browser-based WYSIWYG editor that lets you write Markdown and create threaded comments in real time, with the raw mdcomments syntax updating live.
+
+## VS Code Extension
+
+This repository also includes [`vscode-mdcomments`](vscode-mdcomments/), a Visual Studio Code extension for working with mdcomments directly in `.md` files.
+
+Key capabilities:
+
+- **Interactive Preview** panel with highlighted anchors and threaded comment cards
+- **`mdcomments: Add Comment`** command to create a new anchored comment from selected text
+- **`mdcomments: Reply to Comment`** command to append replies to existing threads
+- **`mdcomments.defaultAuthor`** setting to prefill author names
+
+See [`vscode-mdcomments/README.md`](vscode-mdcomments/README.md) for setup, commands, and development instructions.
