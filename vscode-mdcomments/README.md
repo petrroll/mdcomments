@@ -1,6 +1,6 @@
 # vscode-mdcomments
 
-> **Note:** This extension is a **UX/DX demonstration** and is not production-ready. It may break or behave unexpectedly. Use it to explore the mdcomments workflow, not in a production environment.
+> **Note:** This extension is a **UX/DX demonstration** and is not production-ready. It may break or behave unexpectedly. Use it to explore the mdcomments workflow, not in a production environment. You can try it by installing the latest `.vsix` package from [GitHub Releases](https://github.com/petrroll/mdcomments/releases).
 
 A VS Code extension for mdcomments with a dedicated **interactive preview** panel,
 letting you **view**, **add**, and **reply to** comments directly in `.md` files.
@@ -69,7 +69,7 @@ See the full specification in the `specification.md` file in the mdcomments repo
 
 Download the latest extension package (`.vsix`) from:
 
-- https://github.com/petrroll/mdcomments/releases
+- [GitHub Releases](https://github.com/petrroll/mdcomments/releases)
 
 Install it in VS Code:
 
