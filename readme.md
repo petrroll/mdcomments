@@ -47,6 +47,8 @@ Try the [interactive editor](examples/interactive-editor/) — a browser-based W
 
 This repository also includes [`vscode-mdcomments`](vscode-mdcomments/), a Visual Studio Code extension for working with mdcomments directly in `.md` files.
 
+> **Note:** This extension is a **UX/DX demonstration** and is not production-ready. You can try it by installing the latest `.vsix` package from [GitHub Releases](https://github.com/petrroll/mdcomments/releases).
+
 Key capabilities:
 
 - **Interactive Preview** panel with highlighted anchors and threaded comment cards
